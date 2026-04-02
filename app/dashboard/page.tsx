@@ -1,35 +1,18 @@
-import { logout } from "@/app/(auth)/actions/auth-actions";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-
+export default function Page() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Dashboard</CardTitle>
+        <CardTitle>Casa PMS Dashboard</CardTitle>
         <CardDescription>
-          You are authenticated and ready to build your app.
+          Milestone 00 foundation is in place. Continue with rooms, guests, and reservations.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         <p className="text-sm text-muted-foreground">
-          Signed in as <span className="font-medium">{data.user?.email}</span>
+          Sidebar navigation, payment routing, and foundational PMS modules are scaffolded.
         </p>
-        <form action={logout}>
-          <Button type="submit" variant="outline">
-            Sign out
-          </Button>
-        </form>
       </CardContent>
     </Card>
   );
