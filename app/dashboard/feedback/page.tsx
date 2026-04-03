@@ -7,6 +7,7 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { CopySurveyLinkButton } from "@/components/custom/copy-survey-link-button";
 import {
   escalateFeedback,
   getFeedbackContext,
@@ -36,6 +37,11 @@ function getGuestName(guestRaw: unknown) {
     ? (guestRaw[0] as { first_name?: string; last_name?: string } | undefined)
     : (guestRaw as { first_name?: string; last_name?: string } | null);
   return `${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim() || "Unknown guest";
+}
+
+function buildSurveyUrl(token: string) {
+  const base = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "http://localhost:3000";
+  return `${base}/feedback/${token}`;
 }
 
 interface FeedbackPageProps {
@@ -70,35 +76,53 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
 
   async function sendSurveyAndRedirect(formData: FormData) {
     "use server";
+    let errorMessage: string | null = null;
+
     try {
       await sendFeedbackSurvey(formData);
-      redirect("/dashboard/feedback?ok=survey-sent");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to send feedback survey";
-      redirect(`/dashboard/feedback?error=${encodeURIComponent(message)}`);
+      errorMessage = err instanceof Error ? err.message : "Failed to send feedback survey";
     }
+
+    if (errorMessage) {
+      redirect(`/dashboard/feedback?error=${encodeURIComponent(errorMessage)}`);
+    }
+
+    redirect("/dashboard/feedback?ok=survey-sent");
   }
 
   async function escalateAndRedirect(formData: FormData) {
     "use server";
+    let errorMessage: string | null = null;
+
     try {
       await escalateFeedback(formData);
-      redirect("/dashboard/feedback?ok=feedback-escalated");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to escalate feedback";
-      redirect(`/dashboard/feedback?error=${encodeURIComponent(message)}`);
+      errorMessage = err instanceof Error ? err.message : "Failed to escalate feedback";
     }
+
+    if (errorMessage) {
+      redirect(`/dashboard/feedback?error=${encodeURIComponent(errorMessage)}`);
+    }
+
+    redirect("/dashboard/feedback?ok=feedback-escalated");
   }
 
   async function resolveAndRedirect(formData: FormData) {
     "use server";
+    let errorMessage: string | null = null;
+
     try {
       await resolveFeedbackIssue(formData);
-      redirect("/dashboard/feedback?ok=feedback-resolved");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to resolve feedback";
-      redirect(`/dashboard/feedback?error=${encodeURIComponent(message)}`);
+      errorMessage = err instanceof Error ? err.message : "Failed to resolve feedback";
     }
+
+    if (errorMessage) {
+      redirect(`/dashboard/feedback?error=${encodeURIComponent(errorMessage)}`);
+    }
+
+    redirect("/dashboard/feedback?ok=feedback-resolved");
   }
 
   return (
@@ -199,6 +223,7 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
                   const res = Array.isArray(tk.reservations)
                     ? tk.reservations[0]
                     : tk.reservations;
+                  const surveyUrl = buildSurveyUrl(tk.token);
                   return (
                     <div
                       key={tk.id}
@@ -211,6 +236,17 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
                         <p className="text-xs text-zinc-400">
                           Sent {tk.sent_at ? new Date(tk.sent_at).toLocaleDateString() : "—"}
                         </p>
+                        <a
+                          href={surveyUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-block text-xs font-medium text-[#ff6900] hover:underline"
+                        >
+                          Open survey link
+                        </a>
+                        <div>
+                          <CopySurveyLinkButton url={surveyUrl} />
+                        </div>
                       </div>
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tk.responded_at ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}

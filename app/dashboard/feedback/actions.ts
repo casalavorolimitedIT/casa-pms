@@ -74,10 +74,27 @@ export async function sendFeedbackSurvey(formData: FormData) {
 
   const supabase = await createClient();
 
+  // Ensure the selected reservation belongs to the selected property.
+  // This avoids opaque RLS insert failures and gives a clear operator error.
+  const { data: reservation, error: reservationError } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("id", parsed.data.reservationId)
+    .eq("property_id", parsed.data.propertyId)
+    .maybeSingle();
+
+  if (reservationError) {
+    throw new Error(`Failed to validate reservation: ${reservationError.message}`);
+  }
+
+  if (!reservation) {
+    throw new Error("Selected reservation does not belong to this property");
+  }
+
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + parsed.data.expiresInDays);
 
-  const { data: tokenRecord } = await supabase
+  const { data: tokenRecord, error: tokenError } = await supabase
     .from("feedback_tokens")
     .insert({
       reservation_id: parsed.data.reservationId,
@@ -86,6 +103,10 @@ export async function sendFeedbackSurvey(formData: FormData) {
     })
     .select("token")
     .single();
+
+  if (tokenError) {
+    throw new Error(`Failed to create feedback token: ${tokenError.message}`);
+  }
 
   if (!tokenRecord) throw new Error("Failed to create feedback token");
 
@@ -104,8 +125,8 @@ export async function sendFeedbackSurvey(formData: FormData) {
 
   if (guest?.phone) {
     await dispatchOutboundMessage({
-      propertyId: parsed.data.propertyId,
-      guestPhone: guest.phone,
+      channel: "sms",
+      to: guest.phone,
       body: `Hi ${guest.first_name ?? "there"}, we hope you enjoyed your stay! Share your feedback here: ${surveyUrl}`,
     }).catch(() => {
       // Messaging failure is non-fatal

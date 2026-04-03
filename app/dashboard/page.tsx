@@ -357,12 +357,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">Today&apos;s Agenda</p>
-                    <p className="mt-1 max-w-xl text-sm text-zinc-600">
+                    <p className="mt-1 max-w-xl text-sm text-zinc-600 wrap-break-word w-[90%]">
                       Review live work, inspect previous operations, or scan what comes next without leaving the calendar view.
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap lg:flex-nowrap gap-2">
                     <Button asChild variant="outline" size="sm" className="border-zinc-200 bg-white">
                       <Link href="/dashboard/concierge">Review concierge queue</Link>
                     </Button>

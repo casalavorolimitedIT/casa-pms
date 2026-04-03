@@ -14,7 +14,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { LayoutBottomIcon, AudioWave01Icon, CommandIcon, Home11Icon, UserGroupIcon, BedIcon, Calendar03Icon, Invoice03Icon, DollarSquareIcon, PieChartIcon, FolderOpenIcon, Building06Icon } from "@hugeicons/core-free-icons"
+import { LayoutBottomIcon, AudioWave01Icon, CommandIcon, Home11Icon, UserGroupIcon, BedIcon, Calendar03Icon, Invoice03Icon, DollarSquareIcon, PieChartIcon, FolderOpenIcon, Building06Icon, UserIdVerificationIcon, Settings01Icon } from "@hugeicons/core-free-icons"
 
 // This is sample data.
 const data = {
@@ -83,6 +83,10 @@ const data = {
         {
           title: "Guests",
           url: "/dashboard/guests",
+        },
+        {
+          title: "Staff",
+          url: "/dashboard/staff",
         },
         {
           title: "Reservations",
@@ -224,6 +228,39 @@ const data = {
         },
       ],
     },
+    {
+      title: "Settings",
+      url: "/dashboard/settings",
+      icon: (
+        <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
+      ),
+      items: [
+        {
+          title: "General",
+          url: "/dashboard/settings/general",
+        },
+        {
+          title: "Properties",
+          url: "/dashboard/settings/property",
+        },
+        {
+          title: "Roles & Permissions",
+          url: "/dashboard/settings/roles",
+        },
+        {
+          title: "Staff",
+          url: "/dashboard/settings/staff",
+        },
+        {
+          title: "Notifications",
+          url: "/dashboard/settings/notifications",
+        },
+        {
+          title: "Billing",
+          url: "/dashboard/settings/billing",
+        },
+      ],
+    },
   ],
   projects: [
     {
@@ -238,6 +275,13 @@ const data = {
       url: "/dashboard/guests",
       icon: (
         <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
+      ),
+    },
+    {
+      name: "Staff",
+      url: "/dashboard/staff",
+      icon: (
+        <HugeiconsIcon icon={UserIdVerificationIcon} strokeWidth={2} />
       ),
     },
     {

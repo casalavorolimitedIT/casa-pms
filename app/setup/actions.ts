@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getSetupStatus as getCurrentSetupStatus } from "@/lib/setup/get-setup-status";
 
 const SetupSchema = z.object({
   organizationName: z.string().min(2, "Organization name must be at least 2 characters").max(120),
@@ -29,23 +30,15 @@ export async function setupOrganization(formData: FormData) {
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const setupStatus = await getCurrentSetupStatus();
+  const user = setupStatus.user;
 
-  if (userError || !user) {
+  if (!user) {
     redirect("/login?error=Session+expired.+Please+log+in+again.");
   }
 
   // Guard: if profile already exists, skip straight to dashboard.
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id, organization_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile?.organization_id) {
+  if (setupStatus.organizationId) {
     redirect("/dashboard");
   }
 
@@ -102,22 +95,5 @@ export async function setupOrganization(formData: FormData) {
 }
 
 export async function getSetupStatus() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { user: null, hasProfile: false };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, organization_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  return {
-    user: { id: user.id, email: user.email },
-    hasProfile: Boolean(profile?.organization_id),
-  };
+  return getCurrentSetupStatus();
 }

@@ -244,8 +244,8 @@ export async function sendVipArrivalNotice(formData: FormData) {
   if (!guest?.phone) return;
 
   await dispatchOutboundMessage({
-    propertyId: parsed.data.propertyId,
-    guestPhone: guest.phone,
+    channel: "sms",
+    to: guest.phone,
     body: parsed.data.message,
   });
 }

@@ -5,10 +5,10 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { PageTransition } from "@/components/ui/page-transition";
 import { NoiseOverlay } from "@/components/ui/noise-overlay";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getSetupStatus } from "@/lib/setup/get-setup-status";
 
 export default async function DashboardLayout({
   children,
@@ -17,20 +17,10 @@ export default async function DashboardLayout({
 }) {
   await redirectIfNotAuthenticated();
 
-  // Redirect to onboarding if the user has no linked organization yet.
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const setupStatus = await getSetupStatus();
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!profile) {
-      redirect("/setup");
-    }
+  if (setupStatus.user && !setupStatus.organizationId) {
+    redirect("/setup");
   }
 
   const today = new Date();

@@ -1,33 +1,25 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { setupOrganization } from "./actions";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getSetupStatus } from "@/lib/setup/get-setup-status";
 
 interface Props {
   searchParams: Promise<{ error?: string }>;
 }
 
 export default async function SetupPage({ searchParams }: Props) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const setupStatus = await getSetupStatus();
+  const user = setupStatus.user;
 
   if (!user) {
     redirect("/login");
   }
 
   // Already set up → send to dashboard.
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile) {
+  if (setupStatus.organizationId) {
     redirect("/dashboard");
   }
 
