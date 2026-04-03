@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { GuestDocumentsSection } from "./guest-documents-section";
+import { ClearLocalStorageOnMount } from "@/components/custom/clear-local-storage-on-mount";
+import { NEW_GUEST_DRAFT_KEY } from "@/lib/guests/draft";
 
 interface GuestDetailPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ clearDraft?: string }>;
 }
 
 const VIP_COLORS: Record<string, string> = {
@@ -20,10 +23,11 @@ const VIP_COLORS: Record<string, string> = {
   vip: "bg-purple-600 text-white",
 };
 
-export default async function GuestDetailPage({ params }: GuestDetailPageProps) {
+export default async function GuestDetailPage({ params, searchParams }: GuestDetailPageProps) {
   await redirectIfNotAuthenticated();
 
   const { id } = await params;
+  const { clearDraft } = await searchParams;
   const result = await getGuest(id);
 
   if ("error" in result || !result.guest) {
@@ -33,6 +37,12 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
   const { guest, preferences, vipFlag } = result;
 
   return (
+    <>
+      <ClearLocalStorageOnMount
+        enabled={clearDraft === "new-guest"}
+        storageKey={NEW_GUEST_DRAFT_KEY}
+        searchParamToRemove="clearDraft"
+      />
     <div className="page-shell">
       <div className="page-container max-w-3xl">
       {/* Back */}
@@ -127,6 +137,7 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
       <GuestDocumentsSection guestId={id} />
       </div>
     </div>
+    </>
   );
 }
 

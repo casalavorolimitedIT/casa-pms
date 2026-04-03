@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+function reservationDateSchema(message: string) {
+  return z
+    .string()
+    .min(1, message)
+    .transform((value) => value.split("T")[0] ?? value)
+    .pipe(z.string().date(message));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,8 +22,8 @@ const CreateReservationSchema = z
     guestId: z.string().uuid("Select a guest"),
     roomTypeId: z.string().uuid("Select a room type"),
     roomId: z.string().uuid().optional(),
-    checkIn: z.string().date("Invalid check-in date"),
-    checkOut: z.string().date("Invalid check-out date"),
+    checkIn: reservationDateSchema("Invalid check-in date"),
+    checkOut: reservationDateSchema("Invalid check-out date"),
     adults: z.coerce.number().int().min(1).max(20).default(1),
     children: z.coerce.number().int().min(0).max(20).default(0),
     source: z.string().max(60).optional(),
@@ -87,7 +95,15 @@ export async function createReservation(formData: FormData) {
     .select("id")
     .single();
 
-  if (resError) return { error: resError.message };
+  if (resError) {
+    if (resError.message.toLowerCase().includes("row-level security")) {
+      return {
+        error:
+          "Access denied for this property. Ensure your profile is linked to the property's organization (and/or you have a user_property_roles entry).",
+      };
+    }
+    return { error: resError.message };
+  }
 
   // Attach rooms to reservation
   const { error: roomError } = await supabase.from("reservation_rooms").insert({

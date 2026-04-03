@@ -1,4 +1,5 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
+import { redirect } from "next/navigation";
 import { confirmCheckIn, getCheckInReservationContext } from "../../actions/checkin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,15 +9,27 @@ import { Label } from "@/components/ui/label";
 import { RegistrationCard } from "@/components/front-desk/registration-card";
 import { KeyCardForm } from "@/components/front-desk/key-card-form";
 import { FormSelectField } from "@/components/ui/form-select-field";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
 import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ reservationId: string }>;
+  searchParams?: Promise<{
+    ok?: string | string[];
+    error?: string | string[];
+  }>;
 }
 
-export default async function CheckInPage({ params }: PageProps) {
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function CheckInPage({ params, searchParams }: PageProps) {
   await redirectIfNotAuthenticated();
   const { reservationId } = await params;
+  const query = (await searchParams) ?? {};
+  const ok = readSearchValue(query.ok);
+  const error = readSearchValue(query.error);
   const ctx = await getCheckInReservationContext(reservationId);
 
   if (!ctx.reservation) {
@@ -32,12 +45,20 @@ export default async function CheckInPage({ params }: PageProps) {
   const assignedRoomId = rr?.room_id ?? undefined;
   const submitCheckIn = async (formData: FormData) => {
     "use server";
-    await confirmCheckIn(formData);
+    try {
+      const result = await confirmCheckIn(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`/dashboard/front-desk/check-in/${reservationId}?ok=${encodeURIComponent("Check-in completed successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to complete check-in.";
+      redirect(`/dashboard/front-desk/check-in/${reservationId}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   return (
     <div className="page-shell">
       <div className="page-container">
+        <FormStatusToast ok={ok} error={error} />
         <div className="flex items-center justify-between">
           <h1 className="page-title">Guest Check-in</h1>
           <Button asChild variant="outline" size="sm"><Link href="/dashboard/front-desk">Back</Link></Button>

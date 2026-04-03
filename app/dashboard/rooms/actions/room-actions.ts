@@ -99,11 +99,13 @@ export async function updateRoomType(id: string, formData: FormData) {
       base_rate_minor: parsed.data.baseRateMinor,
       max_occupancy: parsed.data.maxOccupancy,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("property_id", parsed.data.propertyId);
 
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard/rooms/types");
+  revalidatePath(`/dashboard/rooms/types/${id}/edit`);
   return { success: true };
 }
 
@@ -137,7 +139,15 @@ export async function createRoom(formData: FormData) {
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.message.toLowerCase().includes("row-level security")) {
+      return {
+        error:
+          "Access denied for this property. Ensure your profile is linked to the property's organization (and/or you have a user_property_roles entry).",
+      };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/dashboard/rooms");
   return { id: data.id };
@@ -177,6 +187,7 @@ export async function updateRoomStatus(formData: FormData) {
   });
 
   revalidatePath("/dashboard/rooms");
+  revalidatePath(`/dashboard/rooms/${parsed.data.roomId}`);
   return { success: true };
 }
 

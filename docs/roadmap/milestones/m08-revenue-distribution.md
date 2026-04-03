@@ -109,16 +109,16 @@ Actions:
 - M06 optional for bundled cross-sell.
 
 ## Acceptance Criteria
-- [ ] Direct booking flow confirms and writes reservation with payment outcome.
-- [ ] NGN checkout completes through Paystack with verified callback before reservation confirmation.
-- [ ] Channel sync works both outbound and inbound with mapping reliability.
-- [ ] Dynamic pricing rule simulation and activation are both available.
-- [ ] Corporate and travel-agent contracts affect sellable rates correctly.
-- [ ] Loyalty earn/redeem entries are auditable in guest and folio history.
+- [x] Direct booking flow confirms and writes reservation with payment outcome.
+- [x] NGN checkout completes through Paystack with verified callback before reservation confirmation.
+- [x] Channel sync works both outbound and inbound with mapping reliability.
+- [x] Dynamic pricing rule simulation and activation are both available.
+- [x] Corporate and travel-agent contracts affect sellable rates correctly.
+- [x] Loyalty earn/redeem entries are auditable in guest and folio history.
 
 ## Agent Tracking
-- Status: Planned
+- Status: Complete
 - Owner:
 - Start Date:
 - Target Date:
-- Blockers:
+- Blockers: None.

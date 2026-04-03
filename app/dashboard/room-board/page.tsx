@@ -1,5 +1,7 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { getRoomBoardSnapshot } from "./actions";
 import { BoardGrid } from "@/components/room-board/board-grid";
 import { BoardLegend } from "@/components/room-board/board-legend";
@@ -20,6 +22,13 @@ export default async function RoomBoardPage() {
       <div className="space-y-1">
         <h1 className="page-title text-balance tracking-tight">Room Board</h1>
         <p className="page-subtitle">Drag reservation bars between room lanes for instant reassignment.</p>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-700">
+        <p>{snapshot.activeDndRoomIds.length} room(s) currently on do-not-disturb.</p>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/dashboard/dnd-log">Open DND Log</Link>
+        </Button>
       </div>
 
       <BoardLegend />

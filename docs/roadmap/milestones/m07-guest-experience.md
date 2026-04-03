@@ -95,13 +95,13 @@ Actions:
 ## Acceptance Criteria
 - [x] Concierge requests support assignment, progress, and closure with traceability.
 - [x] Messaging supports inbound and outbound thread continuity.
-- [ ] Pre-arrival responses update preferences and trigger ops tasks.
-- [ ] Feedback escalation triggers for low scores are reliable.
-- [ ] Key lifecycle actions are auditable and tied to reservation context.
+- [x] Pre-arrival responses update preferences and trigger ops tasks.
+- [x] Feedback escalation triggers for low scores are reliable.
+- [x] Key lifecycle actions are auditable and tied to reservation context.
 
 ## Agent Tracking
-- Status: In Progress
+- Status: Complete
 - Owner: Copilot
 - Start Date: 2026-04-03
-- Target Date:
+- Completed Date: 2026-04-06
 - Blockers: None

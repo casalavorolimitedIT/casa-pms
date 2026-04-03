@@ -109,6 +109,26 @@ const data = {
           title: "Seasons",
           url: "/dashboard/rates/seasons",
         },
+        {
+          title: "Channels",
+          url: "/dashboard/channels",
+        },
+        {
+          title: "Pricing",
+          url: "/dashboard/pricing",
+        },
+        {
+          title: "Corporate",
+          url: "/dashboard/corporate",
+        },
+        {
+          title: "Loyalty",
+          url: "/dashboard/loyalty",
+        },
+        {
+          title: "Agents",
+          url: "/dashboard/agents",
+        },
       ],
     },
     {
@@ -131,6 +151,38 @@ const data = {
           url: "/dashboard/room-board",
         },
         {
+          title: "Housekeeping",
+          url: "/dashboard/housekeeping",
+        },
+        {
+          title: "Work Orders",
+          url: "/dashboard/work-orders",
+        },
+        {
+          title: "Tasks",
+          url: "/dashboard/tasks",
+        },
+        {
+          title: "Lost & Found",
+          url: "/dashboard/lost-found",
+        },
+        {
+          title: "Linen",
+          url: "/dashboard/linen",
+        },
+        {
+          title: "Minibar",
+          url: "/dashboard/minibar",
+        },
+        {
+          title: "Wake-up Calls",
+          url: "/dashboard/front-desk/wake-up-calls",
+        },
+        {
+          title: "DND Log",
+          url: "/dashboard/dnd-log",
+        },
+        {
           title: "Night Audit",
           url: "/dashboard/night-audit",
         },
@@ -145,6 +197,22 @@ const data = {
         {
           title: "Messaging",
           url: "/dashboard/messaging",
+        },
+        {
+          title: "Pre-arrival",
+          url: "/dashboard/pre-arrival",
+        },
+        {
+          title: "VIP Guests",
+          url: "/dashboard/guests/vip",
+        },
+        {
+          title: "Guest Feedback",
+          url: "/dashboard/feedback",
+        },
+        {
+          title: "Digital Keys",
+          url: "/dashboard/keys",
         },
         {
           title: "Room Move",

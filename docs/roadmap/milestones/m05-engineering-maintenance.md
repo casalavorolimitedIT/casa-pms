@@ -67,15 +67,15 @@ Actions:
 - M02 complete.
 
 ## Acceptance Criteria
-- [ ] Work-order lifecycle works from creation to close with ownership trail.
+- [x] Work-order lifecycle works from creation to close with ownership trail.
 - [ ] Preventive schedule recurrence creates actionable future items.
 - [ ] OOO periods block sellable inventory immediately.
 - [ ] OOO release restores inventory and audit trace remains intact.
 - [ ] Asset register supports warranty and service audit history.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
+- Status: In Progress
+- Owner: Copilot
+- Start Date: 2026-04-03
 - Target Date:
 - Blockers:

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -6,6 +7,7 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { getMessagingContext, markAsRead, replyToThread, sendMessage, sendTemplate } from "./actions";
@@ -13,6 +15,8 @@ import { getMessagingContext, markAsRead, replyToThread, sendMessage, sendTempla
 type MessagingPageProps = {
   searchParams?: Promise<{
     thread?: string | string[];
+    ok?: string | string[];
+    error?: string | string[];
   }>;
 };
 
@@ -31,6 +35,11 @@ const STATUS_TONE: Record<string, string> = {
 
 function readSearchValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function withStatus(base: string, key: "ok" | "error", value: string) {
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}${key}=${encodeURIComponent(value)}`;
 }
 
 function getGuest(guestRaw: unknown) {
@@ -69,15 +78,71 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
 
   const params = (await searchParams) ?? {};
   const selectedThreadId = readSearchValue(params.thread);
+  const ok = readSearchValue(params.ok);
+  const error = readSearchValue(params.error);
   const context = await getMessagingContext(activePropertyId, selectedThreadId);
   const activeThread = context.threads.find((thread) => thread.id === context.selectedThreadId) ?? null;
   const activeGuest = getGuest(activeThread?.guests);
   const unreadThreads = context.threads.filter((thread) => thread.unread_count > 0).length;
   const waitingOnStaff = context.threads.filter((thread) => thread.status === "waiting_on_staff").length;
 
+  const sendMessageAction = async (formData: FormData) => {
+    "use server";
+    try {
+      await sendMessage(formData);
+      redirect(`/dashboard/messaging?ok=${encodeURIComponent("Message sent successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to send message.";
+      redirect(`/dashboard/messaging?error=${encodeURIComponent(message)}`);
+    }
+  };
+
+  const sendTemplateAction = async (formData: FormData) => {
+    "use server";
+    const threadId = String(formData.get("threadId") ?? "");
+    const base = threadId ? `/dashboard/messaging?thread=${encodeURIComponent(threadId)}` : "/dashboard/messaging";
+
+    try {
+      await sendTemplate(formData);
+      redirect(withStatus(base, "ok", "Template sent successfully."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to send template.";
+      redirect(withStatus(base, "error", message));
+    }
+  };
+
+  const markAsReadAction = async (formData: FormData) => {
+    "use server";
+    const threadId = String(formData.get("threadId") ?? "");
+    const base = threadId ? `/dashboard/messaging?thread=${encodeURIComponent(threadId)}` : "/dashboard/messaging";
+
+    try {
+      await markAsRead(formData);
+      redirect(withStatus(base, "ok", "Thread marked as read."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to mark thread as read.";
+      redirect(withStatus(base, "error", message));
+    }
+  };
+
+  const replyAction = async (formData: FormData) => {
+    "use server";
+    const threadId = String(formData.get("threadId") ?? "");
+    const base = threadId ? `/dashboard/messaging?thread=${encodeURIComponent(threadId)}` : "/dashboard/messaging";
+
+    try {
+      await replyToThread(formData);
+      redirect(withStatus(base, "ok", "Reply sent successfully."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to send reply.";
+      redirect(withStatus(base, "error", message));
+    }
+  };
+
   return (
     <div className="page-shell">
       <div className="page-container">
+        <FormStatusToast ok={ok} error={error} />
         <div className="space-y-1">
           <h1 className="page-title text-balance tracking-tight">Guest Messaging</h1>
           <p className="page-subtitle">Run a unified guest inbox across outbound reminders, concierge follow-up, and inbound replies without losing reservation context.</p>
@@ -114,7 +179,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                 <CardTitle className="text-base">Start a Conversation</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={sendMessage} className="grid gap-4">
+                <form action={sendMessageAction} className="grid gap-4">
                   <input type="hidden" name="propertyId" value={activePropertyId} />
 
                   <div className="grid gap-2">
@@ -224,7 +289,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                     <Badge className={CHANNEL_TONE[activeThread.channel] ?? "bg-zinc-100 text-zinc-700"}>{activeThread.channel}</Badge>
                     <Badge className={STATUS_TONE[activeThread.status] ?? "bg-zinc-100 text-zinc-700"}>{activeThread.status.replaceAll("_", " ")}</Badge>
                     {activeThread.unread_count > 0 ? (
-                      <form action={markAsRead}>
+                      <form action={markAsReadAction}>
                         <input type="hidden" name="threadId" value={activeThread.id} />
                         <FormSubmitButton idleText="Mark as Read" pendingText="Saving..." size="sm" variant="outline" />
                       </form>
@@ -253,7 +318,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                       <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">Quick Templates</p>
                       <div className="mt-3 grid gap-2">
                         {context.templates.map((template) => (
-                          <form key={template.key} action={sendTemplate}>
+                          <form key={template.key} action={sendTemplateAction}>
                             <input type="hidden" name="threadId" value={activeThread.id} />
                             <input type="hidden" name="templateKey" value={template.key} />
                             <FormSubmitButton idleText={template.label} pendingText="Sending template..." variant="outline" className="w-full justify-start border-zinc-200 bg-white text-left text-sm text-zinc-700" />
@@ -288,7 +353,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                     )}
                   </div>
 
-                  <form action={replyToThread} className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
+                  <form action={replyAction} className="grid gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
                     <input type="hidden" name="threadId" value={activeThread.id} />
                     <div className="space-y-1">
                       <Label htmlFor="reply-body">Reply</Label>

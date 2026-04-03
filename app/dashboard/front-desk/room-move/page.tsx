@@ -1,4 +1,5 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
+import { redirect } from "next/navigation";
 import { getInHouseReservations, getVacantRooms, moveRoom } from "../actions/checkin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -6,10 +7,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { getActivePropertyId } from "@/lib/pms/property-context";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
 
-export default async function RoomMovePage() {
+type RoomMovePageProps = {
+  searchParams?: Promise<{
+    ok?: string | string[];
+    error?: string | string[];
+  }>;
+};
+
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function RoomMovePage({ searchParams }: RoomMovePageProps) {
   await redirectIfNotAuthenticated();
   const activePropertyId = await getActivePropertyId();
+  const query = (await searchParams) ?? {};
+  const ok = readSearchValue(query.ok);
+  const error = readSearchValue(query.error);
   if (!activePropertyId) return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or add/select an active property in the header.</div>;
 
   const [inHouse, vacant] = await Promise.all([
@@ -18,12 +34,20 @@ export default async function RoomMovePage() {
   ]);
   const submitRoomMove = async (formData: FormData) => {
     "use server";
-    await moveRoom(formData);
+    try {
+      const result = await moveRoom(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`/dashboard/front-desk/room-move?ok=${encodeURIComponent("Room move completed successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to complete room move.";
+      redirect(`/dashboard/front-desk/room-move?error=${encodeURIComponent(message)}`);
+    }
   };
 
   return (
     <div className="page-shell">
       <div className="page-container">
+        <FormStatusToast ok={ok} error={error} />
         <h1 className="page-title">Room Reallocation</h1>
 
         <Card className="glass-panel">

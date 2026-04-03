@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { getFrontDeskSnapshot } from "@/app/dashboard/front-desk/actions/checkin-actions";
@@ -7,6 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
+
+type ArrivalsDeparturesPageProps = {
+  searchParams?: Promise<{
+    ok?: string | string[];
+    error?: string | string[];
+  }>;
+};
+
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function getGuestName(
   guests:
@@ -19,9 +32,12 @@ function getGuestName(
   return `${guest.first_name ?? ""} ${guest.last_name ?? ""}`.trim() || "Unknown guest";
 }
 
-export default async function ArrivalsDeparturesPage() {
+export default async function ArrivalsDeparturesPage({ searchParams }: ArrivalsDeparturesPageProps) {
   await redirectIfNotAuthenticated();
   const activePropertyId = await getActivePropertyId();
+  const params = (await searchParams) ?? {};
+  const ok = readSearchValue(params.ok);
+  const error = readSearchValue(params.error);
 
   if (!activePropertyId) {
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
@@ -29,9 +45,32 @@ export default async function ArrivalsDeparturesPage() {
 
   const snapshot = await getFrontDeskSnapshot(activePropertyId);
 
+  const preCheckInAction = async (reservationId: string) => {
+    "use server";
+    try {
+      await preCheckInReservation(reservationId);
+      redirect(`/dashboard/arrivals-departures?ok=${encodeURIComponent("Pre-check-in completed.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to complete pre-check-in.";
+      redirect(`/dashboard/arrivals-departures?error=${encodeURIComponent(message)}`);
+    }
+  };
+
+  const noShowAction = async (reservationId: string) => {
+    "use server";
+    try {
+      await markReservationNoShow(reservationId);
+      redirect(`/dashboard/arrivals-departures?ok=${encodeURIComponent("Reservation marked as no-show.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to mark reservation as no-show.";
+      redirect(`/dashboard/arrivals-departures?error=${encodeURIComponent(message)}`);
+    }
+  };
+
   return (
     <div className="page-shell">
       <div className="page-container">
+      <FormStatusToast ok={ok} error={error} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="page-title">Arrivals & Departures</h1>
@@ -88,10 +127,10 @@ export default async function ArrivalsDeparturesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-blue-100 text-blue-700">{item.status.replace("_", " ")}</Badge>
-                        <form action={async () => { "use server"; await preCheckInReservation(item.id); }}>
+                        <form action={preCheckInAction.bind(null, item.id)}>
                           <FormSubmitButton idleText="Pre-check-in" pendingText="Processing…" variant="outline" size="sm" />
                         </form>
-                        <form action={async () => { "use server"; await markReservationNoShow(item.id); }}>
+                        <form action={noShowAction.bind(null, item.id)}>
                           <FormSubmitButton idleText="No-show" pendingText="Marking…" variant="destructive" size="sm" />
                         </form>
                         <Button asChild size="sm">

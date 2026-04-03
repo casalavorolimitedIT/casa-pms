@@ -12,7 +12,7 @@ const ReassignSchema = z.object({
 export async function getRoomBoardSnapshot(propertyId: string) {
   const supabase = await createClient();
 
-  const [roomsRes, reservationsRes] = await Promise.all([
+  const [roomsRes, reservationsRes, dndRes] = await Promise.all([
     supabase
       .from("rooms")
       .select("id, room_number, floor, status, room_types(name)")
@@ -27,6 +27,12 @@ export async function getRoomBoardSnapshot(propertyId: string) {
       .eq("property_id", propertyId)
       .in("status", ["tentative", "confirmed", "checked_in"])
       .order("check_in", { ascending: true }),
+    supabase
+      .from("room_dnd_logs")
+      .select("room_id")
+      .eq("property_id", propertyId)
+      .eq("is_dnd", true)
+      .is("ends_at", null),
   ]);
 
   const rooms = roomsRes.data ?? [];
@@ -57,6 +63,7 @@ export async function getRoomBoardSnapshot(propertyId: string) {
   return {
     rooms,
     reservations,
+    activeDndRoomIds: (dndRes.data ?? []).map((row) => row.room_id),
   };
 }
 

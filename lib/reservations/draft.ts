@@ -1,0 +1,1 @@
+export const NEW_RESERVATION_DRAFT_KEY = "casa-pms:new-reservation-draft";

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/server";
 
 const DEMO_ORG_ID = process.env.DEMO_ORG_ID ?? "";
 
@@ -14,18 +15,33 @@ interface GuestsPageProps {
 
 export default async function GuestsPage({ searchParams }: GuestsPageProps) {
   await redirectIfNotAuthenticated();
+  const supabase = await createClient();
 
   const { q = "" } = await searchParams;
 
-  if (!DEMO_ORG_ID) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let organizationId = DEMO_ORG_ID;
+  if (user?.id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    organizationId = profile?.organization_id ?? DEMO_ORG_ID;
+  }
+
+  if (!organizationId) {
     return (
       <div className="p-6 text-muted-foreground text-sm">
-        Set <code>DEMO_ORG_ID</code> in your environment.
+        Set <code>DEMO_ORG_ID</code> in your environment or ensure your profile has an organization.
       </div>
     );
   }
 
-  const { guests } = await searchGuests(DEMO_ORG_ID, q);
+  const { guests } = await searchGuests(organizationId, q);
 
   return (
     <div className="page-shell">

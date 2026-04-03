@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getUserOrganizationId } from "@/app/dashboard/actions/property-actions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -16,7 +17,6 @@ const GuestSchema = z.object({
   nationality: z.string().max(60).optional(),
   dateOfBirth: z.string().date().optional().or(z.literal("")),
   notes: z.string().max(2000).optional(),
-  organizationId: z.string().uuid(),
 });
 
 const GuestPreferenceSchema = z.object({
@@ -46,11 +46,20 @@ export async function createGuest(formData: FormData) {
     nationality: formData.get("nationality"),
     dateOfBirth: formData.get("dateOfBirth"),
     notes: formData.get("notes"),
-    organizationId: formData.get("organizationId"),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message };
+  }
+
+  const formOrganizationId = formData.get("organizationId");
+  const organizationId =
+    typeof formOrganizationId === "string" && formOrganizationId.trim().length > 0
+      ? formOrganizationId.trim()
+      : await getUserOrganizationId();
+
+  if (!organizationId) {
+    return { error: "No organization linked to your account." };
   }
 
   const { data, error } = await supabase
@@ -63,7 +72,7 @@ export async function createGuest(formData: FormData) {
       nationality: parsed.data.nationality || null,
       date_of_birth: parsed.data.dateOfBirth || null,
       notes: parsed.data.notes || null,
-      organization_id: parsed.data.organizationId,
+      organization_id: organizationId,
     })
     .select("id")
     .single();
@@ -77,7 +86,7 @@ export async function createGuest(formData: FormData) {
 export async function updateGuest(id: string, formData: FormData) {
   const supabase = await createClient();
 
-  const parsed = GuestSchema.omit({ organizationId: true }).safeParse({
+  const parsed = GuestSchema.safeParse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
     email: formData.get("email"),

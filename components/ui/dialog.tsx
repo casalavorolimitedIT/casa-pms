@@ -41,7 +41,7 @@ function DialogOverlay({
 }
 
 function DialogContent({
-  className,
+  className="max-h-[80vh]! overflow-y-auto",
   children,
   showCloseButton = true,
   ...props

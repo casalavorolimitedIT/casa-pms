@@ -68,15 +68,15 @@ Features:
 - M02 complete.
 
 ## Acceptance Criteria
-- [ ] Housekeeping board supports assignment and status updates with audit trail.
-- [ ] Task board supports complete lifecycle and links to room context.
-- [ ] Linen/minibar workflows are persisted and financially reconcilable.
-- [ ] Lost-and-found supports image-backed claims process.
-- [ ] Wake-up and DND states are visible to operations in real time.
+- [x] Housekeeping board supports assignment and status updates with audit trail.
+- [x] Task board supports complete lifecycle and links to room context.
+- [x] Linen/minibar workflows are persisted and financially reconcilable.
+- [x] Lost-and-found supports image-backed claims process.
+- [x] Wake-up and DND states are visible to operations in real time.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
-- Target Date:
+- Status: Complete
+- Owner: Copilot
+- Start Date: 2026-04-03
+- Completed Date: 2026-04-03
 - Blockers:

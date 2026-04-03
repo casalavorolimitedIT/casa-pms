@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import {
   addFolioCharge,
@@ -18,14 +19,26 @@ import { PaymentForm } from "@/components/folio/payment-form";
 import { FolioPdfCard } from "@/components/folio/folio-pdf";
 import { calculateFolioBalance } from "@/lib/pms/folio";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{
+    ok?: string | string[];
+    error?: string | string[];
+  }>;
 }
 
-export default async function FolioDetailPage({ params }: PageProps) {
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function FolioDetailPage({ params, searchParams }: PageProps) {
   await redirectIfNotAuthenticated();
   const { id } = await params;
+  const query = (await searchParams) ?? {};
+  const ok = readSearchValue(query.ok);
+  const error = readSearchValue(query.error);
   const result = await getFolioById(id);
 
   if ("error" in result || !result.folio) {
@@ -49,28 +62,79 @@ export default async function FolioDetailPage({ params }: PageProps) {
   const balance = calculateFolioBalance({ chargeTotalMinor: chargeTotal, paymentTotalMinor: paymentTotal });
 
   const closeAction = async () => {
-    await closeFolio(folio.id);
+    "use server";
+    const path = `/dashboard/folios/${folio.id}`;
+
+    try {
+      const result = await closeFolio(folio.id);
+      if (result?.error) throw new Error(result.error);
+      redirect(`${path}?ok=${encodeURIComponent("Folio closed successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to close folio.";
+      redirect(`${path}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   const addChargeAction = async (formData: FormData) => {
-    await addFolioCharge(formData);
+    "use server";
+    const path = `/dashboard/folios/${folio.id}`;
+
+    try {
+      const result = await addFolioCharge(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`${path}?ok=${encodeURIComponent("Charge posted successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to add folio charge.";
+      redirect(`${path}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   const splitChargeAction = async (formData: FormData) => {
-    await splitFolioCharge(formData);
+    "use server";
+    const path = `/dashboard/folios/${folio.id}`;
+
+    try {
+      const result = await splitFolioCharge(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`${path}?ok=${encodeURIComponent("Charge split successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to split charge.";
+      redirect(`${path}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   const transferChargeAction = async (formData: FormData) => {
-    await transferFolioCharge(formData);
+    "use server";
+    const path = `/dashboard/folios/${folio.id}`;
+
+    try {
+      const result = await transferFolioCharge(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`${path}?ok=${encodeURIComponent("Charge transferred successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to transfer charge.";
+      redirect(`${path}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   const addPaymentAction = async (formData: FormData) => {
-    await addFolioPayment(formData);
+    "use server";
+    const path = `/dashboard/folios/${folio.id}`;
+
+    try {
+      const result = await addFolioPayment(formData);
+      if (result?.error) throw new Error(result.error);
+      redirect(`${path}?ok=${encodeURIComponent("Payment posted successfully.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to add folio payment.";
+      redirect(`${path}?error=${encodeURIComponent(message)}`);
+    }
   };
 
   return (
     <div className="page-shell">
       <div className="page-container">
+        <FormStatusToast ok={ok} error={error} />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="page-title">Folio {folio.id.slice(0, 8).toUpperCase()}</h1>

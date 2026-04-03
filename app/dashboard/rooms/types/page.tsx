@@ -65,6 +65,11 @@ export default async function RoomTypesPage() {
                   <span className="text-muted-foreground">Max occupancy: </span>
                   {rt.max_occupancy} guest{rt.max_occupancy !== 1 ? "s" : ""}
                 </p>
+                <div className="pt-2">
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/dashboard/rooms/types/${rt.id}/edit`}>Edit</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

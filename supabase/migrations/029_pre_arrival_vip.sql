@@ -1,5 +1,6 @@
 begin;
 -- 029_pre_arrival_vip
+create extension if not exists pgcrypto;
 
 ----------------------------------------------------------------------------
 -- Pre-arrival tokens
@@ -7,7 +8,7 @@ begin;
 create table if not exists pms.pre_arrival_tokens (
   id uuid primary key default gen_random_uuid(),
   reservation_id uuid not null references pms.reservations(id),
-  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token text not null unique default encode(extensions.gen_random_bytes(24), 'hex'),
   expires_at timestamptz,
   sent_at timestamptz,
   responded_at timestamptz,

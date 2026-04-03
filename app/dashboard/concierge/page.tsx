@@ -1,4 +1,5 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
+import { redirect } from "next/navigation";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import {
   assignRequest,
@@ -14,6 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
+
+type ConciergePageProps = {
+  searchParams?: Promise<{
+    ok?: string | string[];
+    error?: string | string[];
+  }>;
+};
+
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function getGuestName(guestRaw: unknown) {
   if (!guestRaw) return "Unknown guest";
@@ -33,9 +46,12 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700",
 };
 
-export default async function ConciergePage() {
+export default async function ConciergePage({ searchParams }: ConciergePageProps) {
   await redirectIfNotAuthenticated();
   const activePropertyId = await getActivePropertyId();
+  const params = (await searchParams) ?? {};
+  const ok = readSearchValue(params.ok);
+  const error = readSearchValue(params.error);
 
   if (!activePropertyId) {
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
@@ -43,9 +59,54 @@ export default async function ConciergePage() {
 
   const context = await getConciergeContext(activePropertyId);
 
+  const createRequestAction = async (formData: FormData) => {
+    "use server";
+    try {
+      await createRequest(formData);
+      redirect(`/dashboard/concierge?ok=${encodeURIComponent("Concierge request created.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to create concierge request.";
+      redirect(`/dashboard/concierge?error=${encodeURIComponent(message)}`);
+    }
+  };
+
+  const assignRequestAction = async (formData: FormData) => {
+    "use server";
+    try {
+      await assignRequest(formData);
+      redirect(`/dashboard/concierge?ok=${encodeURIComponent("Staff assignment updated.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to assign request.";
+      redirect(`/dashboard/concierge?error=${encodeURIComponent(message)}`);
+    }
+  };
+
+  const updateStatusAction = async (formData: FormData) => {
+    "use server";
+    try {
+      await updateRequestStatus(formData);
+      redirect(`/dashboard/concierge?ok=${encodeURIComponent("Request status updated.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update request status.";
+      redirect(`/dashboard/concierge?error=${encodeURIComponent(message)}`);
+    }
+  };
+
+  const postChargeAction = async (formData: FormData) => {
+    "use server";
+    try {
+      await postConciergeCharge(formData);
+      redirect(`/dashboard/concierge?ok=${encodeURIComponent("Charge posted to folio.")}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to post concierge charge.";
+      redirect(`/dashboard/concierge?error=${encodeURIComponent(message)}`);
+    }
+  };
+
   return (
     <div className="page-shell">
       <div className="page-container">
+      <FormStatusToast ok={ok} error={error} />
       <div className="space-y-1">
         <h1 className="page-title text-balance tracking-tight">Concierge Requests</h1>
         <p className="page-subtitle">Track service requests, assign staff, manage status SLA, and post billable service charges to folios.</p>
@@ -57,7 +118,7 @@ export default async function ConciergePage() {
             <CardTitle className="text-base">New Request</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createRequest} className="grid gap-4">
+            <form action={createRequestAction} className="grid gap-4">
               <input type="hidden" name="propertyId" value={activePropertyId} />
 
               <div className="grid gap-2">
@@ -164,7 +225,7 @@ export default async function ConciergePage() {
                       </div>
 
                       <div className="mt-3 grid gap-2 lg:grid-cols-3">
-                        <form action={assignRequest} className="flex items-end gap-2">
+                        <form action={assignRequestAction} className="flex items-end gap-2">
                           <input type="hidden" name="requestId" value={request.id} />
                           <div className="flex-1 space-y-1">
                             <Label className="text-xs">Assign Staff</Label>
@@ -182,7 +243,7 @@ export default async function ConciergePage() {
                           <FormSubmitButton idleText="Assign" pendingText="Assigning..." variant="outline" size="sm" />
                         </form>
 
-                        <form action={updateRequestStatus} className="flex items-end gap-2">
+                        <form action={updateStatusAction} className="flex items-end gap-2">
                           <input type="hidden" name="requestId" value={request.id} />
                           <div className="flex-1 space-y-1">
                             <Label className="text-xs">Status</Label>
@@ -201,7 +262,7 @@ export default async function ConciergePage() {
                           <FormSubmitButton idleText="Update" pendingText="Updating..." variant="outline" size="sm" />
                         </form>
 
-                        <form action={postConciergeCharge} className="flex items-end gap-2">
+                        <form action={postChargeAction} className="flex items-end gap-2">
                           <input type="hidden" name="requestId" value={request.id} />
                           <div className="flex-1 space-y-1">
                             <Label className="text-xs">Folio ID</Label>

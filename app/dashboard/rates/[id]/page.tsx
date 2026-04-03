@@ -1,18 +1,28 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { addRateRestriction, getRatePlanDetail } from "../actions/rate-actions";
+import { addRateRestriction, getRatePlanDetail, updateRateRestriction } from "../actions/rate-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RestrictionForm } from "@/components/rates/restriction-form";
-import { formatCurrencyMinor } from "@/lib/pms/formatting";
+import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
+import { RestrictionsTable } from "./restrictions-table";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ ok?: string | string[]; error?: string | string[] }>;
 }
 
-export default async function RatePlanDetailPage({ params }: PageProps) {
+function readSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function RatePlanDetailPage({ params, searchParams }: PageProps) {
   await redirectIfNotAuthenticated();
   const { id } = await params;
+  const query = (await searchParams) ?? {};
+  const ok = readSearchValue(query.ok);
+  const error = readSearchValue(query.error);
   const result = await getRatePlanDetail(id);
 
   if ("error" in result || !result.plan) {
@@ -22,61 +32,69 @@ export default async function RatePlanDetailPage({ params }: PageProps) {
   const { plan, roomTypes, restrictions } = result;
   const submitAddRestriction = async (formData: FormData) => {
     "use server";
-    await addRateRestriction(formData);
+    const actionResult = await addRateRestriction(formData);
+    if (actionResult?.success) {
+      redirect(`/dashboard/rates/${id}?ok=${encodeURIComponent("Restriction added.")}`);
+    }
+    redirect(`/dashboard/rates/${id}?error=${encodeURIComponent(actionResult?.error ?? "Unable to add restriction.")}`);
+  };
+
+  const submitUpdateRestriction = async (formData: FormData) => {
+    "use server";
+    const actionResult = await updateRateRestriction(formData);
+    if (actionResult?.success) {
+      redirect(`/dashboard/rates/${id}?ok=${encodeURIComponent("Restriction updated.")}`);
+    }
+    redirect(`/dashboard/rates/${id}?error=${encodeURIComponent(actionResult?.error ?? "Unable to update restriction.")}`);
   };
 
   return (
     <div className="page-shell">
       <div className="page-container">
+        <FormStatusToast ok={ok} error={error} />
         <div className="flex items-center justify-between">
-          <div>
+            
+            <div>
             <h1 className="page-title">{plan.name}</h1>
             <p className="page-subtitle">Currency: {plan.currency_code}</p>
-          </div>
+            </div>
+          <div className="flex items-center gap-3">
           <Button asChild size="sm" variant="outline"><Link href="/dashboard/rates">Back</Link></Button>
+          <PageHelpDialog
+              className=" border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+              pageName="Rate plan restrictions"
+              summary="This page manages seasonal pricing restrictions for the selected rate plan, including room-type-specific blackout dates, minimum stays, and override rates."
+              responsibilities={[
+                "Review the restrictions already attached to this rate plan.",
+                "Add a new restriction for a specific room type and date range.",
+                "Edit an existing restriction without leaving the page.",
+              ]}
+              relatedPages={[
+                {
+                  href: "/dashboard/rates",
+                  label: "Rates",
+                  description: "This detail page depends on the Rates page for selecting the rate plan you want to manage.",
+                },
+              ]}
+            />
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Seasonal Restrictions</CardTitle></CardHeader>
-            <CardContent>
-              {restrictions.length === 0 ? (
-                <p className="page-subtitle">No restrictions added yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {restrictions.map((r) => {
-                    const roomType = roomTypes.find((rt) => rt.id === r.room_type_id);
-                    return (
-                      <div key={r.id} className="rounded-lg border border-zinc-200 p-3 text-sm">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-zinc-900">{roomType?.name ?? "Room Type"}</p>
-                          <p className="font-semibold text-zinc-900">{formatCurrencyMinor(r.rate_minor, plan.currency_code)}</p>
-                        </div>
-                        <p className="text-zinc-500">
-                          {new Date(r.date_from).toLocaleDateString()} - {new Date(r.date_to).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          Min stay: {r.min_stay ?? "-"} | Max stay: {r.max_stay ?? "-"} | CTA: {r.closed_to_arrival ? "Yes" : "No"} | CTD: {r.closed_to_departure ? "Yes" : "No"}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Add Restriction</CardTitle></CardHeader>
-            <CardContent>
-              <RestrictionForm
-                ratePlanId={plan.id}
-                roomTypes={roomTypes.map((r) => ({ id: r.id, name: r.name }))}
-                action={submitAddRestriction}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="glass-panel">
+          <CardHeader>
+            <CardTitle className="text-base">Seasonal Restrictions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RestrictionsTable
+              ratePlanId={plan.id}
+              currencyCode={plan.currency_code}
+              roomTypes={roomTypes.map((roomType) => ({ id: roomType.id, name: roomType.name }))}
+              restrictions={restrictions}
+              onCreate={submitAddRestriction}
+              onUpdate={submitUpdateRestriction}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

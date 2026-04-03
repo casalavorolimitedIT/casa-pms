@@ -1,5 +1,6 @@
 begin;
 -- 031_digital_keys
+create extension if not exists pgcrypto;
 
 create table if not exists pms.digital_keys (
   id uuid primary key default gen_random_uuid(),
