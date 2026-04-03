@@ -50,7 +50,7 @@ export async function createGuest(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { data, error } = await supabase
@@ -88,7 +88,7 @@ export async function updateGuest(id: string, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { error } = await supabase
@@ -192,7 +192,7 @@ export async function upsertGuestPreference(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { error } = await supabase.from("guest_preferences").upsert(
@@ -235,7 +235,7 @@ export async function flagGuestVip(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const {

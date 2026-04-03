@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { isValidElement, type ReactNode } from "react";
 
 import {
   AlertDialog,
@@ -29,9 +29,11 @@ export function ConfirmationDialog({
   cancelText?: string;
   onConfirm: () => void;
 }) {
+  const triggerElement = isValidElement(trigger) ? trigger : <span>{trigger}</span>;
+
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogTrigger render={triggerElement} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

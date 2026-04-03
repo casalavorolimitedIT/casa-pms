@@ -21,10 +21,11 @@ export default async function RoomTypesPage() {
   const { roomTypes } = await getRoomTypes(activePropertyId);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="page-shell">
+      <div className="page-container">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Room Types</h1>
+          <h1 className="page-title">Room Types</h1>
           <p className="text-sm text-muted-foreground">
             {roomTypes.length} type{roomTypes.length !== 1 ? "s" : ""} configured
           </p>
@@ -35,7 +36,7 @@ export default async function RoomTypesPage() {
       </div>
 
       {roomTypes.length === 0 ? (
-        <Card>
+        <Card className="glass-panel">
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-muted-foreground">No room types yet.</p>
             <Button asChild size="sm">
@@ -46,7 +47,7 @@ export default async function RoomTypesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {roomTypes.map((rt) => (
-            <Card key={rt.id}>
+            <Card key={rt.id} className="glass-panel">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{rt.name}</CardTitle>
               </CardHeader>
@@ -69,6 +70,7 @@ export default async function RoomTypesPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

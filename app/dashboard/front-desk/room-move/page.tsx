@@ -1,9 +1,8 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getInHouseReservations, getVacantRooms, moveRoom } from "../actions/checkin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { getActivePropertyId } from "@/lib/pms/property-context";
@@ -17,29 +16,42 @@ export default async function RoomMovePage() {
     getInHouseReservations(activePropertyId),
     getVacantRooms(activePropertyId),
   ]);
+  const submitRoomMove = async (formData: FormData) => {
+    "use server";
+    await moveRoom(formData);
+  };
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Room Reallocation</h1>
+    <div className="page-shell">
+      <div className="page-container">
+        <h1 className="page-title">Room Reallocation</h1>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Move Guest Room</CardTitle></CardHeader>
           <CardContent>
-            <form action={moveRoom} className="grid gap-4">
+            <form action={submitRoomMove} className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="reservationId">In-house reservation</Label>
                 <FormSelectField
                   name="reservationId"
                   options={inHouse.map((res) => {
-                    const guest = res.guests as { first_name: string; last_name: string } | null;
-                    const room = (res.reservation_rooms as Array<{ rooms: { room_number: string } | null }>)[0]?.rooms?.room_number;
+                      const guestRaw = res.guests as
+                        | { first_name?: string; last_name?: string }
+                        | Array<{ first_name?: string; last_name?: string }>
+                        | null;
+                      const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw;
+                    const rr = (res.reservation_rooms as Array<{ rooms: { room_number?: string } | Array<{ room_number?: string }> | null }>)[0];
+                    const roomRaw = rr?.rooms;
+                    const room = Array.isArray(roomRaw) ? roomRaw[0]?.room_number : roomRaw?.room_number;
                     return {
                       value: res.id,
                       label: `${guest?.first_name ?? ""} ${guest?.last_name ?? ""} (${room ?? "Unassigned"})`.trim(),
                     };
                   })}
                   placeholder="Select reservation"
+                  emptyStateText="No in-house reservation is currently available."
+                  emptyStateLinkHref="/dashboard/reservations"
+                  emptyStateLinkLabel="Create a reservation"
                 />
               </div>
 
@@ -52,6 +64,9 @@ export default async function RoomMovePage() {
                     label: `Room ${room.room_number}${room.floor != null ? ` · Floor ${room.floor}` : ""}`,
                   }))}
                   placeholder="Select room"
+                  emptyStateText="No vacant room is currently available."
+                  emptyStateLinkHref="/dashboard/rooms/new"
+                  emptyStateLinkLabel="Add a room"
                 />
               </div>
 
@@ -60,7 +75,7 @@ export default async function RoomMovePage() {
                 <Textarea id="note" name="note" placeholder="Maintenance, preference, noise complaint..." />
               </div>
 
-              <Button type="submit">Confirm Room Move</Button>
+              <FormSubmitButton idleText="Confirm Room Move" pendingText="Moving room..." />
             </form>
           </CardContent>
         </Card>

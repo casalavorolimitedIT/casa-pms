@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 interface RestrictionFormProps {
   ratePlanId: string;
   roomTypes: Array<{ id: string; name: string }>;
-  action: (formData: FormData) => Promise<{ error?: string; success?: boolean }>;
+  action: (formData: FormData) => void | Promise<void>;
 }
 
 export function RestrictionForm({ ratePlanId, roomTypes, action }: RestrictionFormProps) {

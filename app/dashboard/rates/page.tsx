@@ -13,14 +13,18 @@ export default async function RatesPage() {
   if (!activePropertyId) return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or add/select an active property in the header.</div>;
 
   const { plans } = await getRatePlans(activePropertyId);
+  const submitCreateRatePlan = async (formData: FormData) => {
+    "use server";
+    await createRatePlan(formData);
+  };
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Rate Management</h1>
-            <p className="text-sm text-zinc-500">Manage plans, restrictions, and seasonal overrides.</p>
+            <h1 className="page-title">Rate Management</h1>
+            <p className="page-subtitle">Manage plans, restrictions, and seasonal overrides.</p>
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm"><Link href="/dashboard/rates/packages">Packages</Link></Button>
@@ -29,11 +33,11 @@ export default async function RatesPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Rate Plans</CardTitle></CardHeader>
             <CardContent>
               {plans.length === 0 ? (
-                <p className="text-sm text-zinc-500">No plans yet.</p>
+                <p className="page-subtitle">No plans yet.</p>
               ) : (
                 <div className="space-y-2">
                   {plans.map((plan) => (
@@ -53,10 +57,10 @@ export default async function RatesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Create New Plan</CardTitle></CardHeader>
             <CardContent>
-              <RatePlanForm propertyId={activePropertyId} action={createRatePlan} />
+              <RatePlanForm propertyId={activePropertyId} action={submitCreateRatePlan} />
             </CardContent>
           </Card>
         </div>

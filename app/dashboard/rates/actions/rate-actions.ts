@@ -42,7 +42,7 @@ export async function createRatePlan(formData: FormData) {
     currencyCode: formData.get("currencyCode"),
     isActive: formData.get("isActive") === "on",
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const { data, error } = await supabase
     .from("rate_plans")
@@ -103,7 +103,7 @@ export async function addRateRestriction(formData: FormData) {
     closedToArrival: formData.get("closedToArrival") === "on",
     closedToDeparture: formData.get("closedToDeparture") === "on",
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const { error } = await supabase.from("room_rates").insert({
     rate_plan_id: parsed.data.ratePlanId,

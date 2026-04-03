@@ -25,6 +25,39 @@ create table if not exists pms.room_rates (
   check (date_to >= date_from)
 );
 
+-- Backward compatibility for databases created with the legacy schema
+-- (columns: date, amount_minor). This ensures db push works on both old and new states.
+alter table pms.room_rates add column if not exists date_from date;
+alter table pms.room_rates add column if not exists date_to date;
+alter table pms.room_rates add column if not exists rate_minor integer;
+alter table pms.room_rates add column if not exists min_stay integer;
+alter table pms.room_rates add column if not exists max_stay integer;
+alter table pms.room_rates add column if not exists closed_to_arrival boolean not null default false;
+alter table pms.room_rates add column if not exists closed_to_departure boolean not null default false;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'pms'
+      and table_name = 'room_rates'
+      and column_name = 'date'
+  ) then
+    execute 'update pms.room_rates set date_from = coalesce(date_from, "date"), date_to = coalesce(date_to, "date") where "date" is not null';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'pms'
+      and table_name = 'room_rates'
+      and column_name = 'amount_minor'
+  ) then
+    execute 'update pms.room_rates set rate_minor = coalesce(rate_minor, amount_minor) where amount_minor is not null';
+  end if;
+end $$;
+
 create index if not exists idx_room_rates_lookup
   on pms.room_rates(rate_plan_id, room_type_id, date_from, date_to);
 

@@ -76,7 +76,7 @@ Components:
 ## Acceptance Criteria
 - [x] Check-in/check-out path works from reservation to room release.
 - [x] Room moves preserve stay integrity and billing linkage.
-- [ ] Folio supports charge posting, payment, split, transfer, and invoice generation.
+- [x] Folio supports charge posting, payment, split, transfer, and invoice generation.
 - [ ] Stripe sandbox flow validated for setup, capture, and refund.
 - [ ] Paystack test mode flow validated for NGN initialize, callback/verify, and folio posting.
 - [x] Rate plans support restrictions and seasonal overrides.
@@ -86,4 +86,8 @@ Components:
 - Owner:
 - Start Date: 2026-04-02
 - Target Date:
-- Blockers: Validate Stripe/Paystack end-to-end test flows and add folio split/transfer + PDF invoice output.
+- Blockers: Run live sandbox validations and capture evidence outputs.
+- Notes:
+	- Added runnable validation scripts: `npm run validate:stripe:sandbox` and `npm run validate:paystack:sandbox`.
+	- Validation runbook: `docs/payment-sandbox-validation.md`.
+	- Local execution currently blocked until `STRIPE_SECRET_KEY` and `PAYSTACK_SECRET_KEY` are present in `.env.local`.

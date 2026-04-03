@@ -24,9 +24,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <>
       <LoginHashErrorBridge />
-      <Card className="w-full">
+      <Card className="w-full border-zinc-200/80 bg-white/85 shadow-sm backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle data-display="true" className="text-3xl font-semibold tracking-tight text-zinc-900">Sign in</CardTitle>
           <CardDescription>
             Use your email and password to continue.
           </CardDescription>

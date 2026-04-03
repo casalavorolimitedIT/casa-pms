@@ -1,13 +1,21 @@
 import Link from "next/link";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { addFolioCharge, addFolioPayment, closeFolio, getFolioById } from "../actions/folio-actions";
+import {
+  addFolioCharge,
+  addFolioPayment,
+  closeFolio,
+  getFolioById,
+  splitFolioCharge,
+  transferFolioCharge,
+} from "../actions/folio-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormSelectField } from "@/components/ui/form-select-field";
 import { FolioLineItem } from "@/components/folio/folio-line-item";
 import { PaymentForm } from "@/components/folio/payment-form";
-import { FolioPdfPlaceholder } from "@/components/folio/folio-pdf";
+import { FolioPdfCard } from "@/components/folio/folio-pdf";
 import { calculateFolioBalance } from "@/lib/pms/folio";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 
@@ -25,20 +33,48 @@ export default async function FolioDetailPage({ params }: PageProps) {
   }
 
   const { folio, charges, payments } = result;
-  const reservation = folio.reservations as { guests: { first_name: string; last_name: string } | null } | null;
+  const reservationRaw = folio.reservations as
+    | { guests?: { first_name?: string; last_name?: string } | Array<{ first_name?: string; last_name?: string }> | null }
+    | Array<{ guests?: { first_name?: string; last_name?: string } | Array<{ first_name?: string; last_name?: string }> | null }>
+    | null;
+
+  const reservation = Array.isArray(reservationRaw)
+    ? reservationRaw[0] ?? null
+    : reservationRaw;
+
+  const guestRaw = reservation?.guests;
+  const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw ?? null;
   const chargeTotal = charges.reduce((sum, item) => sum + item.amount_minor, 0);
   const paymentTotal = payments.reduce((sum, item) => sum + item.amount_minor, 0);
   const balance = calculateFolioBalance({ chargeTotalMinor: chargeTotal, paymentTotalMinor: paymentTotal });
 
-  const closeAction = closeFolio.bind(null, folio.id);
+  const closeAction = async () => {
+    await closeFolio(folio.id);
+  };
+
+  const addChargeAction = async (formData: FormData) => {
+    await addFolioCharge(formData);
+  };
+
+  const splitChargeAction = async (formData: FormData) => {
+    await splitFolioCharge(formData);
+  };
+
+  const transferChargeAction = async (formData: FormData) => {
+    await transferFolioCharge(formData);
+  };
+
+  const addPaymentAction = async (formData: FormData) => {
+    await addFolioPayment(formData);
+  };
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Folio {folio.id.slice(0, 8).toUpperCase()}</h1>
-            <p className="text-sm text-zinc-500">{reservation?.guests?.first_name} {reservation?.guests?.last_name}</p>
+            <h1 className="page-title">Folio {folio.id.slice(0, 8).toUpperCase()}</h1>
+            <p className="page-subtitle">{guest?.first_name ?? ""} {guest?.last_name ?? ""}</p>
           </div>
           <div className="flex gap-2">
             <Button asChild size="sm" variant="outline"><Link href="/dashboard/folios">Back</Link></Button>
@@ -53,10 +89,10 @@ export default async function FolioDetailPage({ params }: PageProps) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Charges</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <form action={addFolioCharge} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
+              <form action={addChargeAction} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
                 <input type="hidden" name="folioId" value={folio.id} />
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="grid gap-2">
@@ -75,6 +111,58 @@ export default async function FolioDetailPage({ params }: PageProps) {
                 <Button type="submit" size="sm" className="w-fit">Post Charge</Button>
               </form>
 
+              {charges.length > 0 && (
+                <form action={splitChargeAction} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
+                  <input type="hidden" name="folioId" value={folio.id} />
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid gap-2 sm:col-span-2">
+                      <Label htmlFor="chargeId">Split charge</Label>
+                      <FormSelectField
+                        name="chargeId"
+                        placeholder="Select charge"
+                        options={charges.map((c) => ({
+                          value: c.id,
+                          label: `${c.category} · ${formatCurrencyMinor(c.amount_minor, folio.currency_code)}`,
+                        }))}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="splitAmountMinor">Split amount</Label>
+                      <Input id="splitAmountMinor" name="splitAmountMinor" type="number" min={1} required />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="splitLabel">Split label</Label>
+                    <Input id="splitLabel" name="splitLabel" placeholder="company_share" defaultValue="split" />
+                  </div>
+                  <Button type="submit" size="sm" variant="outline" className="w-fit">Split Charge</Button>
+                </form>
+              )}
+
+              {charges.length > 0 && (
+                <form action={transferChargeAction} className="grid gap-3 rounded-lg border border-zinc-200 p-4">
+                  <input type="hidden" name="fromFolioId" value={folio.id} />
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="transferChargeId">Transfer charge</Label>
+                      <FormSelectField
+                        name="chargeId"
+                        placeholder="Select charge"
+                        options={charges.map((c) => ({
+                          value: c.id,
+                          label: `${c.category} · ${formatCurrencyMinor(c.amount_minor, folio.currency_code)}`,
+                        }))}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="toFolioId">Destination folio ID</Label>
+                      <Input id="toFolioId" name="toFolioId" placeholder="UUID" required />
+                    </div>
+                  </div>
+                  <Button type="submit" size="sm" variant="outline" className="w-fit">Transfer Charge</Button>
+                </form>
+              )}
+
               {charges.map((charge) => (
                 <FolioLineItem
                   key={charge.id}
@@ -88,10 +176,10 @@ export default async function FolioDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Payments</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <PaymentForm folioId={folio.id} action={addFolioPayment} />
+              <PaymentForm folioId={folio.id} action={addPaymentAction} />
               {payments.map((payment) => (
                 <FolioLineItem
                   key={payment.id}
@@ -106,7 +194,13 @@ export default async function FolioDetailPage({ params }: PageProps) {
           </Card>
         </div>
 
-        <FolioPdfPlaceholder />
+        <FolioPdfCard
+          folioId={folio.id}
+          guestName={`${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim()}
+          currencyCode={folio.currency_code}
+          charges={charges}
+          payments={payments}
+        />
       </div>
     </div>
   );
@@ -114,9 +208,9 @@ export default async function FolioDetailPage({ params }: PageProps) {
 
 function Summary({ title, value }: { title: string; value: string }) {
   return (
-    <Card className="border-zinc-200 bg-white shadow-sm">
+    <Card className="glass-panel">
       <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-600">{title}</CardTitle></CardHeader>
-      <CardContent><p className="text-xl font-semibold text-zinc-900">{value}</p></CardContent>
+      <CardContent><p className="text-2xl font-medium tracking-tight text-zinc-900">{value}</p></CardContent>
     </Card>
   );
 }

@@ -6,6 +6,7 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(supabaseConfig.url, supabaseConfig.anonKey, {
+    db: { schema: "pms" },
     cookies: {
       getAll() {
         return cookieStore.getAll().map(({ name, value }) => ({ name, value }));

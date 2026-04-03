@@ -23,9 +23,9 @@ export default async function RegisterPage({
   const { error } = await searchParams;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-zinc-200/80 bg-white/85 shadow-sm backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>Create account</CardTitle>
+        <CardTitle data-display="true" className="text-3xl font-semibold tracking-tight text-zinc-900">Create account</CardTitle>
         <CardDescription>Register with email and password.</CardDescription>
       </CardHeader>
       <CardContent>

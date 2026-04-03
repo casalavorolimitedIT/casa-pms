@@ -50,11 +50,12 @@ export default async function ReservationsPage({
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="page-shell">
+      <div className="page-container">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="page-title">
             Reservations
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -97,7 +98,7 @@ export default async function ReservationsPage({
 
       {/* Reservations list */}
       {reservations.length === 0 ? (
-        <Card>
+        <Card className="glass-panel">
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-muted-foreground">No reservations found.</p>
             <Button asChild size="sm">
@@ -108,7 +109,7 @@ export default async function ReservationsPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="glass-panel overflow-hidden rounded-lg border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
@@ -126,17 +127,21 @@ export default async function ReservationsPage({
             </thead>
             <tbody className="divide-y">
               {reservations.map((res) => {
-                const guest = res.guests as {
-                  first_name: string;
-                  last_name: string;
-                  email: string | null;
-                } | null;
-                const rooms = (
+                const guestRaw = res.guests as
+                  | { first_name?: string; last_name?: string; email?: string | null }
+                  | Array<{ first_name?: string; last_name?: string; email?: string | null }>
+                  | null;
+                const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw;
+                const roomAssignment = (
                   res.reservation_rooms as Array<{
-                    rooms: { room_number: string } | null;
-                    room_types: { name: string } | null;
+                    rooms: { room_number?: string } | Array<{ room_number?: string }> | null;
+                    room_types: { name?: string } | Array<{ name?: string }> | null;
                   }>
                 )[0];
+                const roomRaw = roomAssignment?.rooms;
+                const roomTypeRaw = roomAssignment?.room_types;
+                const roomNumber = Array.isArray(roomRaw) ? roomRaw[0]?.room_number : roomRaw?.room_number;
+                const roomTypeName = Array.isArray(roomTypeRaw) ? roomTypeRaw[0]?.name : roomTypeRaw?.name;
                 const nights = differenceInCalendarDays(
                   new Date(res.check_out),
                   new Date(res.check_in),
@@ -162,13 +167,13 @@ export default async function ReservationsPage({
                       </p>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      {rooms?.rooms?.room_number ? (
+                      {roomNumber ? (
                         <span className="font-medium">
-                          {rooms.rooms.room_number}
+                          {roomNumber}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          {rooms?.room_types?.name ?? "—"}
+                          {roomTypeName ?? "—"}
                         </span>
                       )}
                     </td>
@@ -196,6 +201,7 @@ export default async function ReservationsPage({
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }

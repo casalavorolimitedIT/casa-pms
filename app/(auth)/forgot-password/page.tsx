@@ -24,9 +24,9 @@ export default async function ForgotPasswordPage({
   const { error, success } = await searchParams;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-zinc-200/80 bg-white/85 shadow-sm backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>Forgot password</CardTitle>
+        <CardTitle data-display="true" className="text-3xl font-semibold tracking-tight text-zinc-900">Forgot password</CardTitle>
         <CardDescription>
           Enter your email and we will send you a reset link.
         </CardDescription>

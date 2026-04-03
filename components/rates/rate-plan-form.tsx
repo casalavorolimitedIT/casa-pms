@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 
 interface RatePlanFormProps {
   propertyId: string;
-  action: (formData: FormData) => Promise<{ error?: string; success?: boolean; id?: string }>;
+  action: (formData: FormData) => void | Promise<void>;
 }
 
 export function RatePlanForm({ propertyId, action }: RatePlanFormProps) {

@@ -23,17 +23,17 @@ export default async function FoliosPage({ searchParams }: PageProps) {
   const { folios } = await getFolios(activePropertyId, q);
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Folios</h1>
-            <p className="text-sm text-zinc-500">Search and manage billing ledgers for active and historical stays.</p>
+            <h1 className="page-title">Folios</h1>
+            <p className="page-subtitle">Search and manage billing ledgers for active and historical stays.</p>
           </div>
           <Button asChild variant="outline" size="sm"><Link href="/dashboard/folios/company">Company Ledger</Link></Button>
         </div>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardContent className="pt-6">
             <form className="flex gap-2" method="GET">
               <Input name="q" defaultValue={q} placeholder="Search by folio id..." className="max-w-sm" />
@@ -42,13 +42,13 @@ export default async function FoliosPage({ searchParams }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader>
             <CardTitle className="text-base">Results ({folios.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {folios.length === 0 ? (
-              <p className="text-sm text-zinc-500">No folios found.</p>
+              <p className="page-subtitle">No folios found.</p>
             ) : (
               <div className="overflow-auto rounded-lg border border-zinc-200">
                 <table className="w-full text-sm">
@@ -63,13 +63,25 @@ export default async function FoliosPage({ searchParams }: PageProps) {
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
                     {folios.map((folio) => {
-                      const reservation = folio.reservations as { check_in: string; check_out: string; guests: { first_name: string; last_name: string } | null } | null;
+                      const reservationRaw = folio.reservations as
+                        | { check_in?: string; check_out?: string; guests?: { first_name?: string; last_name?: string } | Array<{ first_name?: string; last_name?: string }> | null }
+                        | Array<{ check_in?: string; check_out?: string; guests?: { first_name?: string; last_name?: string } | Array<{ first_name?: string; last_name?: string }> | null }>
+                        | null;
+
+                      const reservation = Array.isArray(reservationRaw)
+                        ? reservationRaw[0] ?? null
+                        : reservationRaw;
+
+                      const guestRaw = reservation?.guests;
+                      const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw ?? null;
                       return (
                         <tr key={folio.id}>
                           <td className="px-4 py-3 font-medium text-zinc-900">{folio.id.slice(0, 8).toUpperCase()}</td>
-                          <td className="px-4 py-3 text-zinc-700">{reservation?.guests?.first_name} {reservation?.guests?.last_name}</td>
+                          <td className="px-4 py-3 text-zinc-700">{guest?.first_name ?? ""} {guest?.last_name ?? ""}</td>
                           <td className="px-4 py-3 text-zinc-600">
-                            {reservation ? `${new Date(reservation.check_in).toLocaleDateString()} - ${new Date(reservation.check_out).toLocaleDateString()}` : "-"}
+                            {reservation?.check_in && reservation?.check_out
+                              ? `${new Date(reservation.check_in).toLocaleDateString()} - ${new Date(reservation.check_out).toLocaleDateString()}`
+                              : "-"}
                           </td>
                           <td className="px-4 py-3">
                             <Badge variant={folio.status === "closed" ? "secondary" : "outline"}>{folio.status}</Badge>

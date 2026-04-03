@@ -8,18 +8,18 @@ export default async function CompanyLedgerPage() {
   const { balances } = await getCompanyBalances();
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Company Ledger</h1>
-          <p className="text-sm text-zinc-500">Aggregated balances by payment provider/company mapping.</p>
+          <h1 className="page-title">Company Ledger</h1>
+          <p className="page-subtitle">Aggregated balances by payment provider/company mapping.</p>
         </div>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Balances</CardTitle></CardHeader>
           <CardContent>
             {balances.length === 0 ? (
-              <p className="text-sm text-zinc-500">No company balance data yet.</p>
+              <p className="page-subtitle">No company balance data yet.</p>
             ) : (
               <div className="overflow-auto rounded-lg border border-zinc-200">
                 <table className="w-full text-sm">

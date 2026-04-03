@@ -60,15 +60,15 @@ Features:
 - M02 complete.
 
 ## Acceptance Criteria
-- [ ] Room board updates without page refresh on key events.
-- [ ] Arrivals/departures supports operational triage in one screen.
-- [ ] Night audit posts charges and flags discrepancies.
-- [ ] Daily revenue snapshots are produced and queryable.
-- [ ] Cash shift close outputs variance and closure record.
+- [x] Room board updates without page refresh on key events.
+- [x] Arrivals/departures supports operational triage in one screen.
+- [x] Night audit posts charges and flags discrepancies.
+- [x] Daily revenue snapshots are produced and queryable.
+- [x] Cash shift close outputs variance and closure record.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
-- Target Date:
-- Blockers:
+- Status: Complete
+- Owner: GitHub Copilot
+- Start Date: 2026-04-03
+- Target Date: 2026-04-03
+- Blockers: None

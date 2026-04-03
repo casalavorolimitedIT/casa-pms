@@ -75,18 +75,19 @@ export async function calculateRate(
   });
   // Remove the last day (checkout day is not a billed night)
   stayNights.pop();
+  const currency = input.currency ?? "USD";
 
   const nightly: NightlyRateBreakdown[] = stayNights.map((night) => {
     const dateStr = format(night, "yyyy-MM-dd");
-    const rateMinor = overrideMap[dateStr] ?? baseRateMinor;
-    return { date: dateStr, rateMinor };
+    const amountMinor = overrideMap[dateStr] ?? baseRateMinor;
+    return { date: dateStr, amountMinor, currency };
   });
 
-  const totalMinor = nightly.reduce((sum, n) => sum + n.rateMinor, 0);
+  const totalMinor = nightly.reduce((sum, n) => sum + n.amountMinor, 0);
 
   return {
     nightly,
     totalMinor,
-    currency: input.currency ?? "USD",
+    currency,
   };
 }

@@ -1,10 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ACTIVE_PROPERTY_COOKIE } from "@/lib/pms/property-context";
 
 const PropertyCreateSchema = z.object({
   name: z.string().min(2).max(120),
@@ -26,7 +24,7 @@ export interface PropertySwitcherItem {
   timezone: string;
 }
 
-async function getUserOrganizationId() {
+export async function getUserOrganizationId() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,38 +41,6 @@ async function getUserOrganizationId() {
   return profile?.organization_id ?? null;
 }
 
-export async function getPropertySwitcherData(): Promise<{
-  properties: PropertySwitcherItem[];
-  selectedId: string;
-}> {
-  const supabase = await createClient();
-  const orgId = await getUserOrganizationId();
-
-  if (!orgId) {
-    return { properties: [], selectedId: "" };
-  }
-
-  const { data } = await supabase
-    .from("properties")
-    .select("id, name, currency_code, timezone")
-    .eq("organization_id", orgId)
-    .order("name", { ascending: true });
-
-  const properties: PropertySwitcherItem[] = (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    currencyCode: row.currency_code,
-    timezone: row.timezone,
-  }));
-
-  const cookieStore = await cookies();
-  const cookieSelectedId = cookieStore.get(ACTIVE_PROPERTY_COOKIE)?.value?.trim() ?? "";
-  const selectedExists = properties.some((p) => p.id === cookieSelectedId);
-  const selectedId = selectedExists ? cookieSelectedId : properties[0]?.id ?? "";
-
-  return { properties, selectedId };
-}
-
 export async function createPropertyAction(formData: FormData) {
   const parsed = PropertyCreateSchema.safeParse({
     name: formData.get("name"),
@@ -83,7 +49,7 @@ export async function createPropertyAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? "Invalid property input" };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid property input" };
   }
 
   const supabase = await createClient();
@@ -139,7 +105,7 @@ export async function updatePropertyAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? "Invalid property update input" };
+    return { error: parsed.error.issues[0]?.message ?? "Invalid property update input" };
   }
 
   const supabase = await createClient();

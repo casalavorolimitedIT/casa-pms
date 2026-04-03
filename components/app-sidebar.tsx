@@ -123,6 +123,30 @@ const data = {
           url: "/dashboard/front-desk",
         },
         {
+          title: "Arrivals & Departures",
+          url: "/dashboard/arrivals-departures",
+        },
+        {
+          title: "Room Board",
+          url: "/dashboard/room-board",
+        },
+        {
+          title: "Night Audit",
+          url: "/dashboard/night-audit",
+        },
+        {
+          title: "Cashier",
+          url: "/dashboard/cashier",
+        },
+        {
+          title: "Concierge",
+          url: "/dashboard/concierge",
+        },
+        {
+          title: "Messaging",
+          url: "/dashboard/messaging",
+        },
+        {
           title: "Room Move",
           url: "/dashboard/front-desk/room-move",
         },
@@ -197,6 +221,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
+        <div className="rounded-xl border border-sidebar-border/80 bg-white/70 p-3 backdrop-blur-sm dark:bg-zinc-900/70">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/60">Casa PMS</p>
+          <p className="mt-1 text-sm font-semibold text-sidebar-foreground">Property Operations</p>
+        </div>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>

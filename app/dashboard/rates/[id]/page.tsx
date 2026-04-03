@@ -20,24 +20,28 @@ export default async function RatePlanDetailPage({ params }: PageProps) {
   }
 
   const { plan, roomTypes, restrictions } = result;
+  const submitAddRestriction = async (formData: FormData) => {
+    "use server";
+    await addRateRestriction(formData);
+  };
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{plan.name}</h1>
-            <p className="text-sm text-zinc-500">Currency: {plan.currency_code}</p>
+            <h1 className="page-title">{plan.name}</h1>
+            <p className="page-subtitle">Currency: {plan.currency_code}</p>
           </div>
           <Button asChild size="sm" variant="outline"><Link href="/dashboard/rates">Back</Link></Button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Seasonal Restrictions</CardTitle></CardHeader>
             <CardContent>
               {restrictions.length === 0 ? (
-                <p className="text-sm text-zinc-500">No restrictions added yet.</p>
+                <p className="page-subtitle">No restrictions added yet.</p>
               ) : (
                 <div className="space-y-2">
                   {restrictions.map((r) => {
@@ -62,13 +66,13 @@ export default async function RatePlanDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-200 bg-white shadow-sm">
+          <Card className="glass-panel">
             <CardHeader><CardTitle className="text-base">Add Restriction</CardTitle></CardHeader>
             <CardContent>
               <RestrictionForm
                 ratePlanId={plan.id}
                 roomTypes={roomTypes.map((r) => ({ id: r.id, name: r.name }))}
-                action={addRateRestriction}
+                action={submitAddRestriction}
               />
             </CardContent>
           </Card>

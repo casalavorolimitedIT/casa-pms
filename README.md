@@ -14,9 +14,16 @@ Create `.env.local` with:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_SMS_FROM=your_twilio_sms_number
+TWILIO_WHATSAPP_FROM=your_twilio_whatsapp_sender
 ```
 
 The app validates these variables at startup.
+
+Twilio variables are only required if you want live outbound and inbound guest messaging. Without them, outbound messages stay queued in the inbox for local workflow testing.
 
 ## 2) Run locally
 

@@ -93,15 +93,15 @@ Actions:
 - M02 complete.
 
 ## Acceptance Criteria
-- [ ] Concierge requests support assignment, progress, and closure with traceability.
-- [ ] Messaging supports inbound and outbound thread continuity.
+- [x] Concierge requests support assignment, progress, and closure with traceability.
+- [x] Messaging supports inbound and outbound thread continuity.
 - [ ] Pre-arrival responses update preferences and trigger ops tasks.
 - [ ] Feedback escalation triggers for low scores are reliable.
 - [ ] Key lifecycle actions are auditable and tied to reservation context.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
+- Status: In Progress
+- Owner: Copilot
+- Start Date: 2026-04-03
 - Target Date:
-- Blockers:
+- Blockers: None

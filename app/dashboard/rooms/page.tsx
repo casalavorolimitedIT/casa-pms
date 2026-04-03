@@ -33,18 +33,20 @@ export default async function RoomsPage() {
   ]);
 
   // Group rooms by floor
-  const byFloor = rooms.reduce<Record<string, typeof rooms>>((acc, room) => {
+  type RoomItem = (typeof rooms)[number];
+  const byFloor = rooms.reduce<Record<string, RoomItem[]>>((acc, room) => {
     const key = room.floor != null ? `Floor ${room.floor}` : "No Floor";
     (acc[key] ??= []).push(room);
     return acc;
   }, {});
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="page-shell">
+      <div className="page-container">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Rooms</h1>
+          <h1 className="page-title">Rooms</h1>
           <p className="text-sm text-muted-foreground">
             {rooms.length} room{rooms.length !== 1 ? "s" : ""} &middot;{" "}
             {roomTypes.length} type{roomTypes.length !== 1 ? "s" : ""}
@@ -62,7 +64,7 @@ export default async function RoomsPage() {
 
       {/* Room grid by floor */}
       {rooms.length === 0 ? (
-        <Card>
+        <Card className="glass-panel">
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-muted-foreground">No rooms yet.</p>
             <Button asChild size="sm">
@@ -72,13 +74,17 @@ export default async function RoomsPage() {
         </Card>
       ) : (
         Object.entries(byFloor).map(([floor, floorRooms]) => (
-          <Card key={floor}>
+          <Card key={floor} className="glass-panel">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium">{floor}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                 {floorRooms.map((room) => (
+                  (() => {
+                    const roomTypeRaw = room.room_types as { name?: string } | Array<{ name?: string }> | null;
+                    const roomTypeName = Array.isArray(roomTypeRaw) ? roomTypeRaw[0]?.name : roomTypeRaw?.name;
+                    return (
                   <Link
                     key={room.id}
                     href={`/dashboard/rooms/${room.id}`}
@@ -88,7 +94,7 @@ export default async function RoomsPage() {
                       {room.room_number}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {(room.room_types as { name: string } | null)?.name ?? "—"}
+                      {roomTypeName ?? "—"}
                     </span>
                     <Badge
                       className={`mt-1 w-fit text-xs font-medium px-1.5 py-0 ${STATUS_TONE[room.status] ?? "bg-muted text-muted-foreground"}`}
@@ -96,12 +102,15 @@ export default async function RoomsPage() {
                       {room.status.replace("_", " ")}
                     </Badge>
                   </Link>
+                    );
+                  })()
                 ))}
               </div>
             </CardContent>
           </Card>
         ))
       )}
+      </div>
     </div>
   );
 }

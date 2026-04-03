@@ -55,7 +55,7 @@ export async function createRoomType(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { data, error } = await supabase
@@ -88,7 +88,7 @@ export async function updateRoomType(id: string, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { error } = await supabase
@@ -122,7 +122,7 @@ export async function createRoom(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const { data, error } = await supabase
@@ -153,7 +153,7 @@ export async function updateRoomStatus(formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
+    return { error: parsed.error.issues[0]?.message };
   }
 
   const {

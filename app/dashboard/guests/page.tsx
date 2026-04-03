@@ -28,11 +28,12 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
   const { guests } = await searchGuests(DEMO_ORG_ID, q);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="page-shell">
+      <div className="page-container">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Guests</h1>
+          <h1 className="page-title">Guests</h1>
           <p className="text-sm text-muted-foreground">
             {guests.length} result{guests.length !== 1 ? "s" : ""}
             {q ? ` for "${q}"` : ""}
@@ -63,7 +64,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
 
       {/* Guest list */}
       {guests.length === 0 ? (
-        <Card>
+        <Card className="glass-panel">
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-muted-foreground">
               {q ? "No guests match your search." : "No guests yet."}
@@ -74,7 +75,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="glass-panel overflow-hidden rounded-lg border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
@@ -115,6 +116,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }

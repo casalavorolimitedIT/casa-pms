@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +22,11 @@ import {
 } from "@/components/ui/select";
 import { appToast } from "@/components/custom/toast-ui";
 import {
-  ACTIVE_PROPERTY_COOKIE,
   type PropertySwitcherItem,
   createPropertyAction,
   updatePropertyAction,
 } from "@/app/dashboard/actions/property-actions";
+import { ACTIVE_PROPERTY_COOKIE } from "@/lib/pms/property-cookie";
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -57,6 +57,10 @@ export function PropertySwitcherClient({
   const [editName, setEditName] = useState("");
   const [editCurrencyCode, setEditCurrencyCode] = useState("USD");
   const [editTimezone, setEditTimezone] = useState("UTC");
+  const [inlineStatus, setInlineStatus] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const selectedProperty = useMemo(
     () => properties.find((property) => property.id === selectedId),
@@ -65,20 +69,25 @@ export function PropertySwitcherClient({
 
   const canManage = properties.length > 0 || !isPending;
 
-  function handleSelectChange(nextId: string) {
+  function handleSelectChange(nextId: string | null) {
+    if (!nextId) return;
     setSelectedId(nextId);
     setActivePropertyCookie(nextId);
+    setInlineStatus(null);
     router.refresh();
   }
 
-  function handleCreateProperty(event: React.FormEvent<HTMLFormElement>) {
+  function handleCreateProperty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedName = newName.trim();
     if (!trimmedName) {
       appToast.error("Property name is required.");
+      setInlineStatus({ kind: "error", message: "Property name is required." });
       return;
     }
+
+    setInlineStatus(null);
 
     startTransition(async () => {
       const formData = new FormData();
@@ -89,6 +98,10 @@ export function PropertySwitcherClient({
       const result = await createPropertyAction(formData);
       if (result.error || !result.property) {
         appToast.error(result.error ?? "Unable to create property.");
+        setInlineStatus({
+          kind: "error",
+          message: result.error ?? "Unable to create property.",
+        });
         return;
       }
 
@@ -99,6 +112,7 @@ export function PropertySwitcherClient({
       setNewCurrencyCode("USD");
       setNewTimezone("UTC");
       appToast.success("Property created.");
+      setInlineStatus({ kind: "success", message: "Property created successfully." });
       router.refresh();
     });
   }
@@ -115,17 +129,21 @@ export function PropertySwitcherClient({
     setEditName("");
     setEditCurrencyCode("USD");
     setEditTimezone("UTC");
+    setInlineStatus(null);
   }
 
-  function handleEditProperty(event: React.FormEvent<HTMLFormElement>) {
+  function handleEditProperty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingId) return;
 
     const trimmedName = editName.trim();
     if (!trimmedName) {
       appToast.error("Property name is required.");
+      setInlineStatus({ kind: "error", message: "Property name is required." });
       return;
     }
+
+    setInlineStatus(null);
 
     startTransition(async () => {
       const formData = new FormData();
@@ -137,6 +155,10 @@ export function PropertySwitcherClient({
       const result = await updatePropertyAction(formData);
       if (result.error || !result.property) {
         appToast.error(result.error ?? "Unable to update property.");
+        setInlineStatus({
+          kind: "error",
+          message: result.error ?? "Unable to update property.",
+        });
         return;
       }
 
@@ -146,6 +168,7 @@ export function PropertySwitcherClient({
         ),
       );
       appToast.success("Property updated.");
+      setInlineStatus({ kind: "success", message: "Property updated successfully." });
       cancelEdit();
       router.refresh();
     });
@@ -184,6 +207,20 @@ export function PropertySwitcherClient({
               Properties come from the database. You can create and edit properties here.
             </DialogDescription>
           </DialogHeader>
+
+          {inlineStatus && (
+            <div
+              className={
+                inlineStatus.kind === "success"
+                  ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+                  : "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+              }
+              role="status"
+              aria-live="polite"
+            >
+              {inlineStatus.message}
+            </div>
+          )}
 
           <div className="space-y-3">
             {properties.length === 0 ? (

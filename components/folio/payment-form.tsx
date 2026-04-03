@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 
 interface PaymentFormProps {
   folioId: string;
-  action: (formData: FormData) => Promise<{ error?: string; success?: boolean }>;
+  action: (formData: FormData) => void | Promise<void>;
 }
 
 export function PaymentForm({ folioId, action }: PaymentFormProps) {

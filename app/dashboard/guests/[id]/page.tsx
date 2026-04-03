@@ -33,7 +33,8 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
   const { guest, preferences, vipFlag } = result;
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-3xl">
+    <div className="page-shell">
+      <div className="page-container max-w-3xl">
       {/* Back */}
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
@@ -43,13 +44,13 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
 
       {/* Guest header */}
       <div className="flex items-start gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-xl font-semibold text-muted-foreground select-none">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl font-medium tracking-tight text-muted-foreground select-none">
           {guest.first_name[0]}
           {guest.last_name[0]}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-semibold">
+            <h1 className="page-title">
               {guest.first_name} {guest.last_name}
             </h1>
             {vipFlag && (
@@ -76,7 +77,7 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
       <Separator />
 
       {/* Contact details */}
-      <Card>
+      <Card className="glass-panel">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Contact Information</CardTitle>
         </CardHeader>
@@ -103,7 +104,7 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
 
       {/* Preferences */}
       {preferences.length > 0 && (
-        <Card>
+        <Card className="glass-panel">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Preferences</CardTitle>
           </CardHeader>
@@ -124,6 +125,7 @@ export default async function GuestDetailPage({ params }: GuestDetailPageProps) 
 
       {/* Documents (uses MediaUpload) */}
       <GuestDocumentsSection guestId={id} />
+      </div>
     </div>
   );
 }

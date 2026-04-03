@@ -2,6 +2,7 @@ import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenti
 import { confirmCheckOut, getCheckOutReservationContext } from "../../actions/checkin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -25,17 +26,25 @@ export default async function CheckOutPage({ params }: PageProps) {
   const chargeTotal = ctx.charges.reduce((sum, c) => sum + c.amount_minor, 0);
   const paymentTotal = ctx.payments.reduce((sum, p) => sum + p.amount_minor, 0);
   const balance = calculateFolioBalance({ chargeTotalMinor: chargeTotal, paymentTotalMinor: paymentTotal });
-  const guest = ctx.reservation.guests as { first_name: string; last_name: string } | null;
+  const guestRaw = ctx.reservation.guests as
+    | { first_name?: string; last_name?: string }
+    | Array<{ first_name?: string; last_name?: string }>
+    | null;
+  const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw;
+  const submitCheckOut = async (formData: FormData) => {
+    "use server";
+    await confirmCheckOut(formData);
+  };
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Guest Check-out</h1>
+          <h1 className="page-title">Guest Check-out</h1>
           <Button asChild variant="outline" size="sm"><Link href="/dashboard/front-desk">Back</Link></Button>
         </div>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Stay Summary</CardTitle></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <Summary label="Guest" value={`${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim()} />
@@ -45,10 +54,10 @@ export default async function CheckOutPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Settle Balance</CardTitle></CardHeader>
           <CardContent>
-            <form action={confirmCheckOut} className="grid gap-4">
+            <form action={submitCheckOut} className="grid gap-4">
               <input type="hidden" name="reservationId" value={reservationId} />
               <input type="hidden" name="folioId" value={ctx.folio.id} />
 
@@ -80,7 +89,7 @@ export default async function CheckOutPage({ params }: PageProps) {
               </div>
 
               <div className="flex gap-2">
-                <Button type="submit">Complete Check-out</Button>
+                <FormSubmitButton idleText="Complete Check-out" pendingText="Checking out…" />
                 <Button type="button" variant="outline" asChild><Link href={`/dashboard/folios/${ctx.folio.id}`}>Open Folio</Link></Button>
               </div>
             </form>
@@ -94,7 +103,7 @@ export default async function CheckOutPage({ params }: PageProps) {
 function Summary({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-zinc-500">{label}</p>
+      <p className="page-subtitle">{label}</p>
       <p className="text-lg font-semibold text-zinc-900">{value}</p>
     </div>
   );

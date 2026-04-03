@@ -19,8 +19,8 @@ export function EarlyLateModal() {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm">Early/Late Override</Button>
+      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+        Early/Late Override
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

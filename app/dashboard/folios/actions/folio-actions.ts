@@ -19,6 +19,19 @@ const AddPaymentSchema = z.object({
   providerReference: z.string().max(120).optional(),
 });
 
+const SplitChargeSchema = z.object({
+  folioId: z.string().uuid(),
+  chargeId: z.string().uuid(),
+  splitAmountMinor: z.coerce.number().int().positive(),
+  splitLabel: z.string().min(1).max(80).default("split"),
+});
+
+const TransferChargeSchema = z.object({
+  fromFolioId: z.string().uuid(),
+  toFolioId: z.string().uuid(),
+  chargeId: z.string().uuid(),
+});
+
 export async function getFolios(propertyId: string, query = "") {
   const supabase = await createClient();
 
@@ -77,7 +90,7 @@ export async function addFolioCharge(formData: FormData) {
     category: formData.get("category"),
     description: formData.get("description"),
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid charge input" };
 
   const { error } = await supabase.from("folio_charges").insert({
     folio_id: parsed.data.folioId,
@@ -100,7 +113,7 @@ export async function addFolioPayment(formData: FormData) {
     provider: formData.get("provider"),
     providerReference: formData.get("providerReference"),
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid payment input" };
 
   const { error } = await supabase.from("folio_payments").insert({
     folio_id: parsed.data.folioId,
@@ -120,6 +133,113 @@ export async function closeFolio(folioId: string) {
   const { error } = await supabase.from("folios").update({ status: "closed" }).eq("id", folioId);
   if (error) return { error: error.message };
   revalidatePath(`/dashboard/folios/${folioId}`);
+  revalidatePath("/dashboard/folios");
+  return { success: true };
+}
+
+export async function splitFolioCharge(formData: FormData) {
+  const supabase = await createClient();
+  const parsed = SplitChargeSchema.safeParse({
+    folioId: formData.get("folioId"),
+    chargeId: formData.get("chargeId"),
+    splitAmountMinor: formData.get("splitAmountMinor"),
+    splitLabel: formData.get("splitLabel") || "split",
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid split input" };
+  }
+
+  const { data: originalCharge, error: chargeError } = await supabase
+    .from("folio_charges")
+    .select("id, folio_id, amount_minor, category, description")
+    .eq("id", parsed.data.chargeId)
+    .eq("folio_id", parsed.data.folioId)
+    .single();
+
+  if (chargeError || !originalCharge) {
+    return { error: chargeError?.message ?? "Charge not found" };
+  }
+
+  if (parsed.data.splitAmountMinor >= originalCharge.amount_minor) {
+    return { error: "Split amount must be smaller than original charge amount." };
+  }
+
+  const remainder = originalCharge.amount_minor - parsed.data.splitAmountMinor;
+
+  const { error: updateError } = await supabase
+    .from("folio_charges")
+    .update({
+      amount_minor: remainder,
+      description: `${originalCharge.description ?? ""} (split remainder)`.trim(),
+    })
+    .eq("id", originalCharge.id);
+
+  if (updateError) return { error: updateError.message };
+
+  const { error: insertError } = await supabase.from("folio_charges").insert({
+    folio_id: parsed.data.folioId,
+    amount_minor: parsed.data.splitAmountMinor,
+    category: `${originalCharge.category}:${parsed.data.splitLabel}`,
+    description: `Split from charge ${originalCharge.id.slice(0, 8)}`,
+  });
+
+  if (insertError) return { error: insertError.message };
+
+  revalidatePath(`/dashboard/folios/${parsed.data.folioId}`);
+  return { success: true };
+}
+
+export async function transferFolioCharge(formData: FormData) {
+  const supabase = await createClient();
+  const parsed = TransferChargeSchema.safeParse({
+    fromFolioId: formData.get("fromFolioId"),
+    toFolioId: formData.get("toFolioId"),
+    chargeId: formData.get("chargeId"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid transfer input" };
+  }
+
+  if (parsed.data.fromFolioId === parsed.data.toFolioId) {
+    return { error: "Destination folio must be different from source folio." };
+  }
+
+  const { data: charge, error: chargeError } = await supabase
+    .from("folio_charges")
+    .select("id, folio_id, amount_minor, category, description")
+    .eq("id", parsed.data.chargeId)
+    .eq("folio_id", parsed.data.fromFolioId)
+    .single();
+
+  if (chargeError || !charge) {
+    return { error: chargeError?.message ?? "Charge not found for transfer." };
+  }
+
+  // Keep immutable audit trail in source folio by zeroing out transferred charge
+  // and writing a mirrored charge in destination folio.
+  const { error: srcUpdateError } = await supabase
+    .from("folio_charges")
+    .update({
+      amount_minor: 0,
+      description: `${charge.description ?? ""} (transferred to ${parsed.data.toFolioId.slice(0, 8)})`.trim(),
+    })
+    .eq("id", charge.id);
+
+  if (srcUpdateError) return { error: srcUpdateError.message };
+
+  const { error: destInsertError } = await supabase.from("folio_charges").insert({
+    folio_id: parsed.data.toFolioId,
+    amount_minor: charge.amount_minor,
+    category: charge.category,
+    description: `Transferred from folio ${parsed.data.fromFolioId.slice(0, 8)}`,
+  });
+
+  if (destInsertError) return { error: destInsertError.message };
+
+  revalidatePath(`/dashboard/folios/${parsed.data.fromFolioId}`);
+  revalidatePath(`/dashboard/folios/${parsed.data.toFolioId}`);
   revalidatePath("/dashboard/folios");
   return { success: true };
 }

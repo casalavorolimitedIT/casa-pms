@@ -22,10 +22,12 @@ export default async function ResetPasswordPage({
   const { error } = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4">
-      <Card className="w-full">
+    <main className="relative min-h-screen overflow-hidden px-4 py-8">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_10%,rgba(255,105,0,0.16),transparent_36%)]" />
+      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center">
+      <Card className="w-full border-zinc-200/80 bg-white/85 shadow-sm backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Reset password</CardTitle>
+          <CardTitle data-display="true" className="text-3xl font-semibold tracking-tight text-zinc-900">Reset password</CardTitle>
           <CardDescription>
             Choose a new password for your account.
           </CardDescription>
@@ -60,6 +62,7 @@ export default async function ResetPasswordPage({
           </form>
         </CardContent>
       </Card>
+      </div>
     </main>
   );
 }

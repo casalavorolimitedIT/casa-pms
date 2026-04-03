@@ -5,14 +5,14 @@ export default async function RatePackagesPage() {
   await redirectIfNotAuthenticated();
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <div className="page-shell">
+      <div className="page-container">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Rate Packages</h1>
-          <p className="text-sm text-zinc-500">Package builder scaffold for bundled room + services pricing.</p>
+          <h1 className="page-title">Rate Packages</h1>
+          <p className="page-subtitle">Package builder scaffold for bundled room + services pricing.</p>
         </div>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Coming Next</CardTitle></CardHeader>
           <CardContent className="text-sm text-zinc-600">
             Package composition (room + breakfast + airport transfer) is prepared as an M02 continuation task.

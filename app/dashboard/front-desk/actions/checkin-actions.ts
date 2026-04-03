@@ -104,7 +104,7 @@ export async function confirmCheckIn(formData: FormData) {
     setupAmountMinor: formData.get("setupAmountMinor"),
   });
 
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   if (!parsed.data.idVerified) return { error: "ID verification is required to check in." };
 
   const { reservationId, roomId, setupAmountMinor, paymentCurrency, paymentEmail } = parsed.data;
@@ -215,7 +215,7 @@ export async function confirmCheckOut(formData: FormData) {
     currency: formData.get("currency"),
     email: formData.get("email"),
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const { reservationId, folioId, paymentMethod, amountMinor, currency, email } = parsed.data;
 
@@ -274,7 +274,7 @@ export async function moveRoom(formData: FormData) {
     toRoomId: formData.get("toRoomId"),
     note: formData.get("note"),
   });
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const { reservationId, toRoomId } = parsed.data;
 

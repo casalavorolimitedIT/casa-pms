@@ -12,14 +12,14 @@ export default async function RateSeasonsPage() {
   const { rows } = await getSeasonView(activePropertyId);
 
   return (
-    <div className="min-h-full bg-zinc-50/60 p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Seasonal Calendar</h1>
-          <p className="text-sm text-zinc-500">Consolidated view of date-range restrictions and overrides.</p>
+    <div className="page-shell">
+      <div className="page-container">
+          <div>
+            <h1 className="text-3xl font-semibold text-zinc-900 md:text-4xl">Seasonal Calendar</h1>
+          <p className="page-subtitle">Consolidated view of date-range restrictions and overrides.</p>
         </div>
 
-        <Card className="border-zinc-200 bg-white shadow-sm">
+        <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Season Rules</CardTitle></CardHeader>
           <CardContent>
             <RateCalendar rows={rows as RateCalendarRow[]} />
