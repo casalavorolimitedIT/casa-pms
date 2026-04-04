@@ -163,6 +163,10 @@ const data = {
           url: "/dashboard/work-orders",
         },
         {
+          title: "Assets",
+          url: "/dashboard/assets",
+        },
+        {
           title: "Tasks",
           url: "/dashboard/tasks",
         },

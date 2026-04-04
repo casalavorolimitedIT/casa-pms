@@ -8,6 +8,7 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { HousekeepingEvidencePanel } from "@/components/custom/housekeeping-evidence-panel";
 import {
   getHousekeepingBoardContext,
   upsertHousekeepingAssignment,
@@ -319,6 +320,14 @@ export default async function HousekeepingPage({ searchParams }: HousekeepingPag
                                   <Input name="note" placeholder="Optional housekeeping note" />
                                   <FormSubmitButton idleText="Update Room" pendingText="Updating..." size="sm" className="bg-[#ff6900] hover:bg-[#e55f00]" />
                                 </form>
+
+                                <div className="lg:col-span-2">
+                                  <HousekeepingEvidencePanel
+                                    propertyId={activePropertyId}
+                                    roomId={room.id}
+                                    roomNumber={room.room_number}
+                                  />
+                                </div>
                               </div>
                             </details>
                           </li>

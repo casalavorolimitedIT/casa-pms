@@ -100,7 +100,7 @@ export function FormDateTimeField({
     <div className={cn("grid gap-2", className)}>
       <input type="hidden" name={name} value={serialized} />
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="outline" className="h-10 w-full justify-between border-zinc-200 bg-white px-3 font-normal text-zinc-700" />}>
+        <DropdownMenuTrigger render={<Button variant="outline" className="h-12 w-full justify-between border-zinc-200 bg-white px-3 font-normal text-zinc-700" />}>
           <span className={cn("truncate", !selectedDate && "text-zinc-400")}>{display}</span>
           <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-4 text-zinc-500" />
         </DropdownMenuTrigger>

@@ -57,7 +57,7 @@ export function FormSelectField({
     <div className={className}>
       <input type="hidden" name={name} value={value} />
       <Select value={value} onValueChange={handleValueChange}>
-        <SelectTrigger disabled={disabled} className="h-10 w-full border-zinc-300 bg-white">
+        <SelectTrigger disabled={disabled} className="h-12! w-full border-zinc-300 bg-white">
           <span className={selectedLabel ? "text-sm" : "text-sm text-muted-foreground"}>
             {selectedLabel || placeholder}
           </span>

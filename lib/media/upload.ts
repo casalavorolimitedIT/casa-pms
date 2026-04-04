@@ -12,6 +12,18 @@
 import { createClient } from "@/lib/supabase/client";
 import { compressImage, type CompressOptions } from "./compress";
 
+const PRIVATE_BUCKETS = new Set([
+  "guest-documents",
+  "guest-profiles",
+  "asset-registry",
+  "work-order-photos",
+  "housekeeping-condition",
+  "lost-and-found",
+  "cleaning-tasks",
+  "maintenance-proof",
+  "guest-messages-media",
+]);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,6 +112,33 @@ function buildFileKey(
   return `properties/${propertyId}/${featureType}/${timestamp}_${sanitized}`;
 }
 
+export function isPrivateBucket(bucket: string) {
+  return PRIVATE_BUCKETS.has(bucket);
+}
+
+export async function resolveAccessibleUrl(
+  bucket: string,
+  fileKey: string,
+  expiresInSeconds = 3600,
+): Promise<string> {
+  const supabase = createClient();
+
+  if (isPrivateBucket(bucket)) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(fileKey, expiresInSeconds);
+
+    if (error) {
+      throw new Error(`Failed to create signed URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(fileKey);
+  return data.publicUrl;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main upload function
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,13 +196,12 @@ export async function uploadMedia(
     throw new Error(`Storage upload failed: ${storageError.message}`);
   }
 
-  // ── 3. Get public URL ──────────────────────────────────────────────────────
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileKey);
-  const url = urlData?.publicUrl ?? "";
+  // ── 3. Resolve URL (signed for private buckets, public for public buckets) ─
+  const url = await resolveAccessibleUrl(bucket, fileKey);
 
   // ── 4. Register metadata row ───────────────────────────────────────────────
   const { data: metaRow, error: metaError } = await supabase
-    .from("pms.media_metadata" as "media_metadata")
+    .from("media_metadata")
     .insert({
       property_id: propertyId,
       bucket_name: bucket,
@@ -191,7 +229,7 @@ export async function uploadMedia(
   }
 
   // ── 5. Write audit log entry ───────────────────────────────────────────────
-  await supabase.from("pms.media_audit_log" as "media_audit_log").insert({
+  await supabase.from("media_audit_log").insert({
     media_metadata_id: metaRow.id,
     bucket_name: bucket,
     file_key: fileKey,
@@ -230,7 +268,7 @@ export async function deleteMedia(
     throw new Error(`Storage delete failed: ${storageErr.message}`);
   }
 
-  await supabase.from("pms.media_audit_log" as "media_audit_log").insert({
+  await supabase.from("media_audit_log").insert({
     media_metadata_id: metadataId,
     bucket_name: bucket,
     file_key: fileKey,
@@ -239,7 +277,7 @@ export async function deleteMedia(
   });
 
   await supabase
-    .from("pms.media_metadata" as "media_metadata")
-    .delete()
+    .from("media_metadata")
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", metadataId);
 }

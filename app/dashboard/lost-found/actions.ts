@@ -10,7 +10,6 @@ const CreateItemSchema = z.object({
   reservationId: z.string().uuid().optional().or(z.literal("")),
   itemName: z.string().min(2).max(140),
   description: z.string().max(2000).optional().or(z.literal("")),
-  imageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 const UpdateItemSchema = z.object({
@@ -27,7 +26,7 @@ export async function getLostFoundContext(propertyId: string) {
   const [itemsRes, roomsRes, reservationsRes] = await Promise.all([
     supabase
       .from("lost_found_items")
-      .select("id, room_id, reservation_id, item_name, description, status, image_url, found_at, claimed_by_name, claimed_contact, claimed_at, notes, rooms(room_number), reservations(id, check_in, guests(first_name,last_name))")
+      .select("id, room_id, reservation_id, item_name, description, status, found_at, claimed_by_name, claimed_contact, claimed_at, notes, rooms(room_number), reservations(id, check_in, guests(first_name,last_name))")
       .eq("property_id", propertyId)
       .order("found_at", { ascending: false })
       .limit(300),
@@ -59,7 +58,6 @@ export async function createLostFoundItem(formData: FormData) {
     reservationId: formData.get("reservationId"),
     itemName: formData.get("itemName"),
     description: formData.get("description"),
-    imageUrl: formData.get("imageUrl"),
   });
 
   if (!parsed.success) {
@@ -77,7 +75,6 @@ export async function createLostFoundItem(formData: FormData) {
     reservation_id: parsed.data.reservationId || null,
     item_name: parsed.data.itemName,
     description: parsed.data.description || null,
-    image_url: parsed.data.imageUrl || null,
     status: "logged",
     created_by: user?.id ?? null,
   });

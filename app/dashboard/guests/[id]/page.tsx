@@ -1,5 +1,6 @@
 import { getGuest } from "../actions/guest-actions";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ const VIP_COLORS: Record<string, string> = {
 
 export default async function GuestDetailPage({ params, searchParams }: GuestDetailPageProps) {
   await redirectIfNotAuthenticated();
+  const propertyId = await getActivePropertyId();
 
   const { id } = await params;
   const { clearDraft } = await searchParams;
@@ -134,7 +136,7 @@ export default async function GuestDetailPage({ params, searchParams }: GuestDet
       )}
 
       {/* Documents (uses MediaUpload) */}
-      <GuestDocumentsSection guestId={id} />
+      <GuestDocumentsSection guestId={id} propertyId={propertyId ?? ""} />
       </div>
     </div>
     </>

@@ -7,8 +7,10 @@
  */
 
 import { useCallback } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediaUpload, type MediaFile } from "@/components/ui/media-upload";
+import { MediaGallery } from "@/components/custom/media-gallery";
 import { uploadMedia } from "@/lib/media";
 import { appToast } from "@/components/custom/toast-ui";
 
@@ -19,21 +21,21 @@ function sevenYearsFromNow(): string {
   ).toISOString();
 }
 
-const DEMO_PROPERTY_ID = process.env.NEXT_PUBLIC_DEMO_PROPERTY_ID ?? "";
+interface GuestDocumentsSectionProps {
+  guestId: string;
+  propertyId: string;
+}
 
-export function GuestDocumentsSection({ guestId }: { guestId: string }) {
+export function GuestDocumentsSection({ guestId, propertyId }: GuestDocumentsSectionProps) {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const handleUpload = useCallback(
     async (files: MediaFile[]) => {
-      if (!DEMO_PROPERTY_ID) {
-        appToast.error("NEXT_PUBLIC_DEMO_PROPERTY_ID is not set");
-        return;
-      }
-
       for (const mediaFile of files) {
         const result = await uploadMedia({
           bucket: "guest-documents",
           file: mediaFile.compressed,
-          propertyId: DEMO_PROPERTY_ID,
+          propertyId,
           featureType: "guest_id",
           guestId,
           relatedEntityId: guestId,
@@ -44,30 +46,43 @@ export function GuestDocumentsSection({ guestId }: { guestId: string }) {
           `Uploaded ${result.uploadedFile.name} · saved ${Math.round(((mediaFile.originalSizeBytes - result.finalSizeBytes) / mediaFile.originalSizeBytes) * 100)}%`,
         );
       }
+
+      setRefreshKey((current) => current + 1);
     },
-    [guestId],
+    [guestId, propertyId],
   );
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Identity Documents</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <MediaUpload
-          label="Upload passport, ID card or visa"
-          accept="image/*,application/pdf"
-          maxFiles={5}
-          onUpload={handleUpload}
-          showCamera
-          cameraFacing="environment"
-          quality={0.5}
-        />
-        <p className="mt-3 text-xs text-muted-foreground">
-          Documents are encrypted and retained for 7 years per KYC compliance.
-          Images are compressed by 50% before upload.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Identity Documents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MediaUpload
+            label="Upload passport, ID card or visa"
+            accept="image/*,application/pdf"
+            maxFiles={5}
+            onUpload={handleUpload}
+            showCamera
+            cameraFacing="environment"
+            quality={0.5}
+          />
+          <p className="mt-3 text-xs text-muted-foreground">
+            Documents are encrypted and retained for 7 years per KYC compliance.
+            Images are compressed by 50% before upload.
+          </p>
+        </CardContent>
+      </Card>
+
+      <MediaGallery
+        propertyId={propertyId}
+        featureType="guest_id"
+        relatedEntityId={guestId}
+        title="Uploaded Documents"
+        emptyStateText="No documents uploaded yet."
+        refreshKey={refreshKey}
+      />
+    </div>
   );
 }

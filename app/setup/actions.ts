@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { getSetupStatus as getCurrentSetupStatus } from "@/lib/setup/get-setup-status";
 
@@ -88,6 +89,17 @@ export async function setupOrganization(formData: FormData) {
     property_id: property.id,
     check_in_time: "15:00",
     check_out_time: "11:00",
+  });
+
+  // 5. Grant the setup user the 'owner' role on their first property.
+  // Must use the admin client because user_property_roles RLS requires an
+  // existing owner/general_manager row to allow inserts — a chicken-and-egg
+  // problem at onboarding time.
+  const adminClient = createAdminClient();
+  await adminClient.from("user_property_roles").insert({
+    user_id: user.id,
+    property_id: property.id,
+    role: "owner",
   });
 
   revalidatePath("/dashboard", "layout");

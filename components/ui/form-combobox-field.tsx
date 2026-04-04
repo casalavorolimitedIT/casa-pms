@@ -79,7 +79,7 @@ export function FormComboboxField({
           placeholder={placeholder}
           disabled={disabled}
           showClear={allowClear}
-          className="w-full"
+          className="w-full h-12!"
         />
         <ComboboxContent>
           <ComboboxEmpty className="block px-3 py-3 text-left text-sm leading-6 text-zinc-600">

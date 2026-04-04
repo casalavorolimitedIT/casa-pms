@@ -219,7 +219,7 @@ export function NewReservationForm({
           <Textarea id="notes" name="notes" rows={4} value={draft.notes} onChange={(event) => updateField("notes", event.target.value)} placeholder="Arrival details, requests, billing notes, etc." />
         </div>
 
-        <FormSubmitButton idleText="Create reservation" pendingText="Creating..." className="bg-[#ff6900] text-white hover:bg-[#e55f00]" />
+        <FormSubmitButton idleText="Create reservation" pendingText="Creating..." className="bg-[#ff6900] text-white hover:bg-[#e55f00] h-12" />
       </form>
     </>
   );

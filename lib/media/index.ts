@@ -7,6 +7,8 @@ export { compressImage, compressImages, type CompressOptions } from "./compress"
 export {
   uploadMedia,
   deleteMedia,
+  resolveAccessibleUrl,
+  isPrivateBucket,
   type UploadMediaInput,
   type UploadMediaResult,
   type FeatureType,

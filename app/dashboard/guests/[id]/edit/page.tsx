@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { FormDateTimeField } from "@/components/ui/form-date-time-field";
 
 interface EditGuestPageProps {
   params: Promise<{ id: string }>;
@@ -102,7 +103,8 @@ export default async function EditGuestPage({ params, searchParams }: EditGuestP
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="dateOfBirth">Date of birth</Label>
-                  <Input id="dateOfBirth" name="dateOfBirth" type="date" defaultValue={guest.date_of_birth ?? ""} />
+                <FormDateTimeField name="dateOfBirth"  includeTime={false} placeholder="Select date of birth" defaultValue={guest.date_of_birth ?? ""} />
+                 
                 </div>
               </div>
 
@@ -114,7 +116,7 @@ export default async function EditGuestPage({ params, searchParams }: EditGuestP
               <FormSubmitButton
                 idleText="Save changes"
                 pendingText="Saving..."
-                className="bg-[#ff6900] text-white hover:bg-[#e55f00]"
+                className="bg-[#ff6900] text-white hover:bg-[#e55f00] h-12"
               />
             </form>
           </CardContent>

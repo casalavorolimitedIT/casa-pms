@@ -9,6 +9,7 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LostFoundMediaPanel } from "@/components/custom/lost-found-media-panel";
 import { createLostFoundItem, getLostFoundContext, updateLostFoundItem } from "./actions";
 
 type LostFoundPageProps = {
@@ -90,11 +91,6 @@ export default async function LostFoundPage({ searchParams }: LostFoundPageProps
                   <Label className="text-zinc-700">Description</Label>
                   <Textarea name="description" rows={3} placeholder="Describe condition, color, location found" className="bg-white resize-none" />
                 </div>
-
-                <div className="grid gap-2">
-                  <Label className="text-zinc-700">Image URL</Label>
-                  <Input name="imageUrl" placeholder="https://..." className="bg-white" />
-                </div>
               </div>
             </div>
 
@@ -163,12 +159,13 @@ export default async function LostFoundPage({ searchParams }: LostFoundPageProps
                         <Badge className={STATUS_TONE[item.status] ?? STATUS_TONE.logged}>{item.status.replaceAll("_", " ")}</Badge>
                       </div>
 
-                      {item.image_url ? (
-                        <a href={item.image_url} target="_blank" className="mt-2 inline-block text-xs text-[#ff6900] underline underline-offset-2">
-                          Open image evidence
-                        </a>
-                      ) : null}
                       {item.description ? <p className="mt-2 text-sm text-zinc-600">{item.description}</p> : null}
+
+                      <LostFoundMediaPanel
+                        propertyId={activePropertyId}
+                        itemId={item.id}
+                        itemName={item.item_name}
+                      />
 
                       <form action={updateAction} className="mt-3 grid gap-2 lg:grid-cols-6">
                         <input type="hidden" name="itemId" value={item.id} />
