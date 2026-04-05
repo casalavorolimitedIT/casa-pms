@@ -96,7 +96,7 @@ export default async function DndLogPage({ searchParams }: DndPageProps) {
                       </form>
 
                       {active ? (
-                        <p className="mt-2 text-xs text-zinc-500">Active since {new Date(active.starts_at).toLocaleString()}</p>
+                        <p className="mt-2 text-xs text-zinc-500">Active since {new Date(active.starts_at).toLocaleString("en-GB")}</p>
                       ) : null}
                     </li>
                   );

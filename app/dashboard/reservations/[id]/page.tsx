@@ -1,18 +1,30 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { differenceInCalendarDays } from "date-fns";
-import { getReservation, updateReservationStatus } from "@/app/dashboard/reservations/actions/reservation-actions";
+import { createClient } from "@/lib/supabase/server";
+import {
+  deleteReservation,
+  getReservation,
+  getReservationFormOptions,
+  updateFullReservation,
+  updateReservationStatus,
+} from "@/app/dashboard/reservations/actions/reservation-actions";
+import { EditReservationForm } from "@/app/dashboard/reservations/[id]/edit-reservation-form";
 import { ClearLocalStorageOnMount } from "@/components/custom/clear-local-storage-on-mount";
 import { PageHelpDialog } from "@/components/custom/page-help-dialog";
+import { ServerActionDeleteModal } from "@/components/custom/server-action-delete-modal";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { NEW_RESERVATION_DRAFT_KEY } from "@/lib/reservations/draft";
 import { Button } from "@/components/ui/button";
+import { hasPermission } from "@/lib/staff/server-permissions";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import { WalkInCompleteBanner } from "@/components/custom/walk-in-complete-banner";
 
 const STATUS_TONE: Record<string, string> = {
   tentative: "bg-slate-100 text-slate-700",
@@ -39,7 +51,7 @@ const STATUS_SELECT_OPTIONS = STATUS_OPTIONS.map((status) => ({
 
 interface ReservationDetailPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; ok?: string; clearDraft?: string }>;
+  searchParams: Promise<{ error?: string; ok?: string; clearDraft?: string; walkin?: string }>;
 }
 
 function first<T>(raw: T | T[] | null | undefined): T | null {
@@ -50,23 +62,53 @@ function first<T>(raw: T | T[] | null | undefined): T | null {
 export default async function ReservationDetailPage({ params, searchParams }: ReservationDetailPageProps) {
   await redirectIfNotAuthenticated();
   const { id } = await params;
-  const { error, ok, clearDraft } = await searchParams;
+  const { error, ok, clearDraft, walkin } = await searchParams;
 
   const result = await getReservation(id);
   if ("error" in result || !result.reservation) {
     notFound();
   }
 
+  const activePropertyId = await getActivePropertyId();
+  if (!activePropertyId) return null;
+
+  const [canUpdateStatus, canDelete, canCreate, formOptions, propertyRow] = await Promise.all([
+    hasPermission(activePropertyId, "reservations.update"),
+    hasPermission(activePropertyId, "reservations.cancel"),
+    hasPermission(activePropertyId, "reservations.create"),
+    getReservationFormOptions(activePropertyId),
+    (await createClient()).from("properties").select("organization_id, name").eq("id", activePropertyId).maybeSingle().then((r) => r.data),
+  ]);
+
   const reservation = result.reservation;
   const guest = first(reservation.guests);
-  const assignment = first(reservation.reservation_rooms as Array<{
-    rooms: { room_number?: string; floor?: number | null; status?: string } | Array<{ room_number?: string; floor?: number | null; status?: string }> | null;
-    room_types: { name?: string; base_rate_minor?: number } | Array<{ name?: string; base_rate_minor?: number }> | null;
+  const assignmentRaw = first(reservation.reservation_rooms as Array<{
+    id: string;
+    room_id: string | null;
+    room_type_id: string;
+    rooms: { id: string; room_number?: string; floor?: number | null; status?: string } | Array<{ id: string; room_number?: string; floor?: number | null; status?: string }> | null;
+    room_types: { id: string; name?: string; base_rate_minor?: number } | Array<{ id: string; name?: string; base_rate_minor?: number }> | null;
   }>);
-  const room = first(assignment?.rooms);
-  const roomType = first(assignment?.room_types);
+  const room = first(assignmentRaw?.rooms);
+  const roomType = first(assignmentRaw?.room_types);
 
   const nights = differenceInCalendarDays(new Date(reservation.check_out), new Date(reservation.check_in));
+
+  const guestOptions = (formOptions?.guests ?? []).map((g) => ({
+    value: g.id,
+    label: `${g.first_name} ${g.last_name}${g.email ? ` · ${g.email}` : ""}`,
+  }));
+  const roomTypeOptions = (formOptions?.roomTypes ?? []).map((rt) => ({
+    value: rt.id,
+    label: `${rt.name} · max ${rt.max_occupancy}`,
+  }));
+  const roomOptions = (formOptions?.rooms ?? []).map((r) => ({
+    value: r.id,
+    label: `${r.room_number} · ${r.status}`,
+  }));
+  const ratePlanOptions = (formOptions?.ratePlans ?? []).map((rp) => ({ value: rp.id, label: rp.name }));
+
+  const ratePlan = first(reservation.rate_plans as Array<{ id: string; name: string }> | { id: string; name: string } | null);
 
   async function updateStatusAndRedirect(formData: FormData) {
     "use server";
@@ -80,49 +122,146 @@ export default async function ReservationDetailPage({ params, searchParams }: Re
     redirect(`/dashboard/reservations/${id}?error=${encodeURIComponent(message)}`);
   }
 
+  async function updateFullReservationAndRedirect(formData: FormData) {
+    "use server";
+
+    const outcome = await updateFullReservation(formData);
+    if (outcome?.success) {
+      redirect(`/dashboard/reservations/${id}?ok=${encodeURIComponent("Reservation updated")}`);
+    }
+
+    const message = outcome?.error ?? "Failed to update reservation";
+    redirect(`/dashboard/reservations/${id}?error=${encodeURIComponent(message)}`);
+  }
+
+  async function deleteReservationAndRedirect(formData: FormData) {
+    "use server";
+
+    const outcome = await deleteReservation(formData);
+    if (outcome?.success) {
+      redirect(`/dashboard/reservations?ok=${encodeURIComponent("Reservation deleted")}`);
+    }
+
+    const message = outcome?.error ?? "Failed to delete reservation";
+    redirect(`/dashboard/reservations/${id}?error=${encodeURIComponent(message)}`);
+  }
+
   return (
     <div className="page-shell">
       <div className="page-container max-w-4xl">
         <ClearLocalStorageOnMount enabled={clearDraft === "new-reservation"} storageKey={NEW_RESERVATION_DRAFT_KEY} searchParamToRemove="clearDraft" />
         <FormStatusToast error={error} ok={ok} successTitle="Reservation updated" />
 
+        {walkin === "1" && (
+          <WalkInCompleteBanner
+            guestName={`${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim() || "Guest"}
+            roomNumber={room?.room_number ?? null}
+            roomTypeName={roomType?.name ?? null}
+            checkIn={reservation.check_in}
+            checkOut={reservation.check_out}
+            nights={nights}
+            adults={reservation.adults}
+            numChildren={reservation.children}
+            ratePlanName={ratePlan?.name ?? null}
+            reservationId={reservation.id}
+            propertyName={propertyRow?.name ?? null}
+          />
+        )}
+
         <div className="flex items-center justify-between gap-3">
           <Button asChild variant="ghost" size="sm" className="-ml-2">
             <Link href="/dashboard/reservations">← All Reservations</Link>
           </Button>
           <div className="flex items-center gap-2">
-            <Dialog>
-              <DialogTrigger render={<Button variant="outline" size="sm" />}>
-                Update Status
-              </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl">
-                <DialogHeader className="gap-2 border-b border-zinc-100 px-6 py-5">
-                  <DialogTitle className="text-base font-semibold">Update reservation status</DialogTitle>
-                  <DialogDescription className="text-sm leading-6 text-zinc-600">
-                    Change the lifecycle state for this reservation. This updates how the reservation appears on the main reservations page.
-                  </DialogDescription>
-                </DialogHeader>
-                <form action={updateStatusAndRedirect} className="grid gap-4 px-6 py-5">
-                  <input type="hidden" name="reservationId" value={reservation.id} />
-                  <FormSelectField
-                    name="status"
-                    defaultValue={reservation.status}
-                    options={STATUS_SELECT_OPTIONS}
-                    placeholder="Select a status"
-                  />
-                  <DialogFooter className="px-0 pb-0" showCloseButton>
-                    <FormSubmitButton
-                      idleText="Save status"
-                      pendingText="Saving..."
-                      className="bg-[#ff6900] text-white hover:bg-[#e55f00]"
+            {canUpdateStatus && (
+              <Dialog>
+                <DialogTrigger render={<Button variant="outline" size="sm" />}>
+                  Edit Reservation
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl! rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl">
+                  <DialogHeader className="gap-2 border-b border-zinc-100 px-6 py-5">
+                    <DialogTitle className="text-base font-semibold">Edit reservation</DialogTitle>
+                    <DialogDescription className="text-sm leading-6 text-zinc-600">
+                      Update guest, room, stay dates, occupancy, rate plan, and notes.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-120px)]">
+                    <EditReservationForm
+                      reservationId={reservation.id}
+                      organizationId={propertyRow?.organization_id ?? ""}
+                      action={updateFullReservationAndRedirect}
+                      defaultValues={{
+                        guestId: first(reservation.guests as { id: string } | Array<{ id: string }> | null)?.id ?? "",
+                        checkIn: reservation.check_in,
+                        checkOut: reservation.check_out,
+                        roomTypeId: assignmentRaw?.room_type_id ?? "",
+                        roomId: assignmentRaw?.room_id ?? "",
+                        adults: reservation.adults,
+                        children: reservation.children,
+                        source: reservation.source ?? "",
+                        ratePlanId: ratePlan?.id ?? "",
+                        notes: reservation.notes ?? "",
+                      }}
+                      guestOptions={guestOptions}
+                      roomTypeOptions={roomTypeOptions}
+                      roomOptions={roomOptions}
+                      ratePlanOptions={ratePlanOptions}
                     />
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/reservations/new">New Reservation</Link>
-            </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canUpdateStatus && (
+              <Dialog>
+                <DialogTrigger render={<Button variant="outline" size="sm" />}>
+                  Update Status
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-xl">
+                  <DialogHeader className="gap-2 border-b border-zinc-100 px-6 py-5">
+                    <DialogTitle className="text-base font-semibold">Update reservation status</DialogTitle>
+                    <DialogDescription className="text-sm leading-6 text-zinc-600">
+                      Change the lifecycle state for this reservation. This updates how the reservation appears on the main reservations page.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form action={updateStatusAndRedirect} className="grid gap-4 px-6 py-5">
+                    <input type="hidden" name="reservationId" value={reservation.id} />
+                    <FormSelectField
+                      name="status"
+                      defaultValue={reservation.status}
+                      options={STATUS_SELECT_OPTIONS}
+                      placeholder="Select a status"
+                    />
+                    <DialogFooter className="px-0 pb-0" showCloseButton>
+                      <FormSubmitButton
+                        idleText="Save status"
+                        pendingText="Saving..."
+                        className="bg-[#ff6900] text-white hover:bg-[#e55f00]"
+                      />
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+            {canDelete && (
+              <ServerActionDeleteModal
+                action={deleteReservationAndRedirect}
+                fields={{ reservationId: reservation.id }}
+                triggerLabel="Delete"
+                triggerVariant="outline"
+                triggerSize="sm"
+                triggerClassName="text-red-600 hover:text-red-700"
+                title="Delete reservation"
+                itemName={`${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim() || "this reservation"}
+                description="This permanently removes the reservation and all linked records (room assignments, concierge requests without posted charges)."
+                confirmText="Delete reservation"
+                loadingText="Deleting reservation..."
+              />
+            )}
+            {canCreate && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/reservations/new">New Reservation</Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -148,7 +287,7 @@ export default async function ReservationDetailPage({ params, searchParams }: Re
             <div>
               <h1 className="page-title">Reservation</h1>
               <p className="page-subtitle">
-                {new Date(reservation.check_in).toLocaleDateString()} → {new Date(reservation.check_out).toLocaleDateString()} · {nights} night{nights !== 1 ? "s" : ""}
+                {new Date(reservation.check_in).toLocaleDateString("en-GB")} → {new Date(reservation.check_out).toLocaleDateString("en-GB")} · {nights} night{nights !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -180,7 +319,7 @@ export default async function ReservationDetailPage({ params, searchParams }: Re
                   <tr>
                     <th className="bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-600">Stay dates</th>
                     <td className="px-4 py-3 text-zinc-700">
-                      {new Date(reservation.check_in).toLocaleDateString()} to {new Date(reservation.check_out).toLocaleDateString()} · {nights} night{nights !== 1 ? "s" : ""}
+                      {new Date(reservation.check_in).toLocaleDateString("en-GB")} to {new Date(reservation.check_out).toLocaleDateString("en-GB")} · {nights} night{nights !== 1 ? "s" : ""}
                     </td>
                   </tr>
                   <tr>
@@ -200,6 +339,10 @@ export default async function ReservationDetailPage({ params, searchParams }: Re
                     <td className="px-4 py-3 text-zinc-700">{reservation.source ?? "—"}</td>
                   </tr>
                   <tr>
+                    <th className="bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-600">Rate plan</th>
+                    <td className="px-4 py-3 text-zinc-700">{ratePlan?.name ?? "—"}</td>
+                  </tr>
+                  <tr>
                     <th className="bg-zinc-50 px-4 py-3 text-left font-medium text-zinc-600">Notes</th>
                     <td className="px-4 py-3 text-zinc-700">{reservation.notes ?? "—"}</td>
                   </tr>
@@ -208,6 +351,7 @@ export default async function ReservationDetailPage({ params, searchParams }: Re
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

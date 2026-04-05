@@ -46,3 +46,21 @@ export async function getActivePropertyId() {
 
   return process.env.DEMO_PROPERTY_ID?.trim() ?? "";
 }
+
+export async function requireActivePropertyId() {
+  const activePropertyId = await getActivePropertyId();
+  if (!activePropertyId) {
+    throw new Error("No active property selected");
+  }
+
+  return activePropertyId;
+}
+
+export async function assertActivePropertyAccess(propertyId: string) {
+  const activePropertyId = await requireActivePropertyId();
+  if (propertyId !== activePropertyId) {
+    throw new Error("Operation is not allowed outside the active property");
+  }
+
+  return activePropertyId;
+}

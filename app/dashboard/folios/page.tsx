@@ -80,7 +80,7 @@ export default async function FoliosPage({ searchParams }: PageProps) {
                           <td className="px-4 py-3 text-zinc-700">{guest?.first_name ?? ""} {guest?.last_name ?? ""}</td>
                           <td className="px-4 py-3 text-zinc-600">
                             {reservation?.check_in && reservation?.check_out
-                              ? `${new Date(reservation.check_in).toLocaleDateString()} - ${new Date(reservation.check_out).toLocaleDateString()}`
+                              ? `${new Date(reservation.check_in).toLocaleDateString("en-GB")} - ${new Date(reservation.check_out).toLocaleDateString("en-GB")}`
                               : "-"}
                           </td>
                           <td className="px-4 py-3">

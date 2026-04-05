@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 import {
   buildTemplateMessage,
   dispatchOutboundMessage,
@@ -35,6 +36,22 @@ const MarkAsReadSchema = z.object({
 });
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function ensureThreadInActiveProperty(threadId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("message_threads")
+    .select("id")
+    .eq("id", threadId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Message thread not found for the active property");
+  }
+}
 
 function getGuestName(guestRaw: unknown) {
   if (!guestRaw) return "Guest";
@@ -109,6 +126,7 @@ async function persistOutboundMessage(input: {
 }
 
 export async function getMessagingContext(propertyId: string, selectedThreadId?: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [threadsRes, reservationsRes] = await Promise.all([
@@ -175,6 +193,8 @@ export async function sendMessage(formData: FormData) {
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid message input");
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
   const createdBy = await getCurrentUserId();
@@ -254,6 +274,8 @@ export async function replyToThread(formData: FormData) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid reply input");
   }
 
+  await ensureThreadInActiveProperty(parsed.data.threadId);
+
   const supabase = await createClient();
   const createdBy = await getCurrentUserId();
 
@@ -288,6 +310,8 @@ export async function sendTemplate(formData: FormData) {
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid template request");
   }
+
+  await ensureThreadInActiveProperty(parsed.data.threadId);
 
   const supabase = await createClient();
   const createdBy = await getCurrentUserId();
@@ -325,6 +349,8 @@ export async function markAsRead(formData: FormData) {
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid thread id");
   }
+
+  await ensureThreadInActiveProperty(parsed.data.threadId);
 
   const supabase = await createClient();
   const readAt = new Date().toISOString();

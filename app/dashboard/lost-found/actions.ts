@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateItemSchema = z.object({
   propertyId: z.string().uuid(),
@@ -20,7 +21,24 @@ const UpdateItemSchema = z.object({
   notes: z.string().max(1500).optional().or(z.literal("")),
 });
 
+async function ensureItemInActiveProperty(itemId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("lost_found_items")
+    .select("id")
+    .eq("id", itemId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Lost-and-found item not found for the active property");
+  }
+}
+
 export async function getLostFoundContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [itemsRes, roomsRes, reservationsRes] = await Promise.all([
@@ -64,6 +82,8 @@ export async function createLostFoundItem(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid lost-and-found input" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -97,6 +117,8 @@ export async function updateLostFoundItem(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid update input" };
   }
+
+  await ensureItemInActiveProperty(parsed.data.itemId);
 
   const updates: Record<string, string | null> = {
     status: parsed.data.status,

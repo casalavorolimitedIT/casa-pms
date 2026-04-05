@@ -119,7 +119,7 @@ function ReservationList({
                       <div>
                         <p className="font-medium text-zinc-900">{guest?.first_name} {guest?.last_name}</p>
                         <p className="text-xs text-zinc-500">
-                          {new Date(item.check_in).toLocaleDateString()} - {new Date(item.check_out).toLocaleDateString()}
+                          {new Date(item.check_in).toLocaleDateString("en-GB")} - {new Date(item.check_out).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

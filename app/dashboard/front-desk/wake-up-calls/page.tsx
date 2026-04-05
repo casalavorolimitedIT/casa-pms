@@ -146,7 +146,7 @@ export default async function WakeUpCallsPage({ searchParams }: WakeupPageProps)
                         </div>
                         <p className="text-sm text-zinc-600 flex items-center gap-1.5">
                           <svg className="size-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          {new Date(call.scheduled_for).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          {new Date(call.scheduled_for).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                         {call.note ? <p className="text-sm text-zinc-500 mt-2 bg-zinc-50 rounded-md p-2 border border-zinc-100">{call.note}</p> : null}
                       </div>

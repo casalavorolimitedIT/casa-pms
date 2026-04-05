@@ -150,7 +150,7 @@ export default async function LinenPage({ searchParams }: LinenPageProps) {
                           {txn.txn_type.toUpperCase()} · {txn.quantity}
                         </p>
                         <p className="text-zinc-600">{roomType?.name ?? "Unassigned"}</p>
-                        <p className="text-xs text-zinc-500">{new Date(txn.created_at).toLocaleString()}</p>
+                        <p className="text-xs text-zinc-500">{new Date(txn.created_at).toLocaleString("en-GB")}</p>
                         {txn.note ? <p className="text-xs text-zinc-500">{txn.note}</p> : null}
                       </li>
                     );

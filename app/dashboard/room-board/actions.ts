@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const ReassignSchema = z.object({
   reservationId: z.string().uuid(),
@@ -10,6 +11,7 @@ const ReassignSchema = z.object({
 });
 
 export async function getRoomBoardSnapshot(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [roomsRes, reservationsRes, dndRes] = await Promise.all([
@@ -75,6 +77,29 @@ export async function reassignReservationRoom(input: { reservationId: string; to
 
   const { reservationId, toRoomId } = parsed.data;
   const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data: reservation } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!reservation) {
+    return { error: "Reservation not found for the active property" };
+  }
+
+  const { data: targetRoom } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("id", toRoomId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!targetRoom) {
+    return { error: "Destination room not found for the active property" };
+  }
 
   const { data: reservationRoom, error: reservationRoomError } = await supabase
     .from("reservation_rooms")

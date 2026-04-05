@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NEW_GUEST_DRAFT_KEY } from "@/lib/guests/draft";
+import { FormDateTimeField } from "@/components/ui/form-date-time-field";
 
 interface NewGuestDraft {
   firstName: string;
@@ -142,13 +143,14 @@ export function NewGuestForm({ error, action }: NewGuestFormProps) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="dateOfBirth">Date of birth</Label>
-            <Input
+             <FormDateTimeField name="dateOfBirth" editableYear={true}  defaultValue={draft.dateOfBirth ?? undefined} className="bg-white" includeTime={false} placeholder="Select date" />
+            {/* <Input
               id="dateOfBirth"
               name="dateOfBirth"
               type="date"
               value={draft.dateOfBirth}
               onChange={(e) => updateField("dateOfBirth", e.target.value)}
-            />
+            /> */}
           </div>
         </div>
 

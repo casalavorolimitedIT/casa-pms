@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateCorporateSchema = z.object({
   propertyId: z.string().uuid(),
@@ -31,7 +32,24 @@ const PostPaymentSchema = z.object({
   reference: z.string().max(120).optional().or(z.literal("")),
 });
 
+async function ensureInvoiceInActiveProperty(invoiceId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("corporate_invoices")
+    .select("id")
+    .eq("id", invoiceId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Invoice not found for the active property");
+  }
+}
+
 export async function getCorporateContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data: property, error: propertyError } = await supabase
@@ -101,6 +119,8 @@ export async function createCorporateAccount(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid account profile" };
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const { data: property, error: propertyError } = await supabase
     .from("properties")
@@ -132,6 +152,8 @@ export async function assignCorporateRate(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid corporate assignment" };
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("corporate_rate_assignments")
@@ -161,6 +183,8 @@ export async function generateMonthlyInvoice(formData: FormData) {
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid invoice period" };
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
 
@@ -259,6 +283,8 @@ export async function postCorporatePayment(formData: FormData) {
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid payment payload" };
+
+  await ensureInvoiceInActiveProperty(parsed.data.invoiceId);
 
   const supabase = await createClient();
 

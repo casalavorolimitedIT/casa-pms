@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { createReservation } from "@/app/dashboard/reservations/actions/reservation-actions";
+import { createReservation, createWalkInReservation } from "@/app/dashboard/reservations/actions/reservation-actions";
 import { NewReservationForm } from "@/app/dashboard/reservations/new/new-reservation-form";
 import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,19 @@ export default async function NewReservationPage({ searchParams }: NewReservatio
     redirect(`/dashboard/reservations/new?error=${encodeURIComponent(message)}`);
   }
 
+  async function createWalkInAndRedirect(formData: FormData) {
+    "use server";
+
+    const result = await createWalkInReservation(formData);
+
+    if (result?.id) {
+      redirect(`/dashboard/reservations/${result.id}?walkin=1&clearDraft=new-reservation`);
+    }
+
+    const message = result?.error ?? "Failed to check in";
+    redirect(`/dashboard/reservations/new?error=${encodeURIComponent(message)}`);
+  }
+
   return (
     <div className="page-shell">
       <div className="page-container max-w-3xl">
@@ -139,12 +152,14 @@ export default async function NewReservationPage({ searchParams }: NewReservatio
           <CardContent>
             <NewReservationForm
               activePropertyId={activePropertyId}
+              organizationId={organizationId ?? ""}
               error={error}
               guestOptions={guestOptions}
               roomTypeOptions={roomTypeOptions}
               roomOptions={roomOptions}
               ratePlanOptions={ratePlanOptions}
               action={createReservationAndRedirect}
+              walkInAction={createWalkInAndRedirect}
             />
           </CardContent>
         </Card>

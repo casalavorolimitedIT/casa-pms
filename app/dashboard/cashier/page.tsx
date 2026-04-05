@@ -125,7 +125,7 @@ export default async function CashierPage() {
                       <li key={entry.id} className="flex items-center justify-between rounded-md border border-zinc-200 p-2 text-sm">
                         <div>
                           <p className="font-medium capitalize text-zinc-900">{entry.entry_type.replace("_", " ")}</p>
-                          <p className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString()}</p>
+                          <p className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString("en-GB")}</p>
                         </div>
                         <p className={entry.entry_type === "cash_out" ? "font-semibold text-amber-700" : "font-semibold text-emerald-700"}>
                           {entry.entry_type === "cash_out" ? "-" : "+"}
@@ -192,8 +192,8 @@ export default async function CashierPage() {
                     <div>
                       <p className="font-medium text-zinc-900">{isOpen ? "Open Shift" : "Closed Shift"}</p>
                       <p className="text-xs text-zinc-500">
-                        Opened: {new Date(shift.opened_at).toLocaleString()}
-                        {shift.closed_at ? ` • Closed: ${new Date(shift.closed_at).toLocaleString()}` : ""}
+                        Opened: {new Date(shift.opened_at).toLocaleString("en-GB")}
+                        {shift.closed_at ? ` • Closed: ${new Date(shift.closed_at).toLocaleString("en-GB")}` : ""}
                       </p>
                     </div>
                     <div className="text-right">

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateWakeupSchema = z.object({
   propertyId: z.string().uuid(),
@@ -16,7 +17,24 @@ const UpdateWakeupSchema = z.object({
   status: z.enum(["scheduled", "called", "missed", "cancelled"]),
 });
 
+async function ensureWakeupInActiveProperty(wakeupId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("wake_up_calls")
+    .select("id")
+    .eq("id", wakeupId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Wake-up call not found for the active property");
+  }
+}
+
 export async function getWakeupContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [callsRes, reservationsRes, dueSoonRes] = await Promise.all([
@@ -60,6 +78,8 @@ export async function createWakeupCall(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid wake-up request" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
 
   const scheduledForIso = new Date(parsed.data.scheduledFor).toISOString();
@@ -88,6 +108,8 @@ export async function updateWakeupCall(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid wake-up update" };
   }
+
+  await ensureWakeupInActiveProperty(parsed.data.wakeupId);
 
   const supabase = await createClient();
   const {

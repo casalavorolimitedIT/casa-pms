@@ -76,6 +76,7 @@ Route group: app/dashboard/reports/segmentation/
 Features:
 - revenue share by direct, OTA, corporate, walk-in, group, agent
 - filter by date, property, and room type
+- walk-in reporting includes the timestamp a receptionist booked the walk-in guest, with receptionist attribution where available
 
 Implementation map:
 - app/dashboard/reports/segmentation/page.tsx
@@ -102,6 +103,7 @@ Implementation map:
 - [ ] KPI metrics are reproducible from source data.
 - [ ] AR report supports aging and payment linkage.
 - [ ] Pace/segmentation reports support full filtering needs.
+- [ ] Walk-in analytics can show when a receptionist booked a walk-in guest for operational and conversion analysis.
 - [ ] CSV and PDF export works for all top-level report pages.
 - [ ] Reporting dictionary and reconciliation runbook are present and versioned.
 

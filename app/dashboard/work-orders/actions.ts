@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateWorkOrderSchema = z.object({
   propertyId: z.string().uuid(),
@@ -33,7 +34,26 @@ const ResolveWorkOrderSchema = z.object({
   releaseRoom: z.coerce.boolean().default(false),
 });
 
+async function ensureWorkOrderInActiveProperty(workOrderId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("work_orders")
+    .select("id")
+    .eq("id", workOrderId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Work order not found for the active property");
+  }
+
+  return activePropertyId;
+}
+
 export async function getWorkOrdersContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -89,6 +109,8 @@ export async function createWorkOrder(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid work-order input" };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
   const {
@@ -159,6 +181,8 @@ export async function assignWorkOrder(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid assignment input" };
   }
 
+  await ensureWorkOrderInActiveProperty(parsed.data.workOrderId);
+
   const supabase = await createClient();
 
   const updates: Record<string, string | null> = {
@@ -190,6 +214,8 @@ export async function updateWorkOrderStatus(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid status update" };
   }
+
+  await ensureWorkOrderInActiveProperty(parsed.data.workOrderId);
 
   const supabase = await createClient();
 
@@ -223,6 +249,8 @@ export async function resolveWorkOrder(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid resolve input" };
   }
+
+  await ensureWorkOrderInActiveProperty(parsed.data.workOrderId);
 
   const supabase = await createClient();
   const {

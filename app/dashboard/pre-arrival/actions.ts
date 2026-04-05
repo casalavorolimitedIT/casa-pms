@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchOutboundMessage, sanitizeMessagePreview } from "@/lib/pms/messaging";
+import { assertActivePropertyAccess } from "@/lib/pms/property-context";
 
 const SendSurveySchema = z.object({
   propertyId: z.string().uuid(),
@@ -28,6 +29,7 @@ function buildAppUrl(path: string) {
 }
 
 export async function getPreArrivalContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [reservationsRes, tokensRes] = await Promise.all([
@@ -61,6 +63,7 @@ export async function getPreArrivalContext(propertyId: string) {
 }
 
 export async function getPreArrivalResponses(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const reservationIds = await supabase
@@ -89,6 +92,8 @@ export async function sendPreArrivalSurvey(formData: FormData) {
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Invalid input");
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
 

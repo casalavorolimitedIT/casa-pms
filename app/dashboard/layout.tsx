@@ -9,6 +9,8 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { getSetupStatus } from "@/lib/setup/get-setup-status";
+import { getCurrentUserPermissions } from "@/lib/staff/server-permissions";
+import { PermissionsProvider } from "@/components/permissions-provider";
 
 export default async function DashboardLayout({
   children,
@@ -24,13 +26,16 @@ export default async function DashboardLayout({
   }
 
   const today = new Date();
-  const formattedDate = today.toLocaleDateString(undefined, {
+  const formattedDate = today.toLocaleDateString("en-GB", {
     weekday: "long",
     month: "short",
     day: "numeric",
   });
 
+  const permissions = await getCurrentUserPermissions();
+
   return (
+    <PermissionsProvider permissions={permissions}>
     <SidebarProvider>
       <NoiseOverlay />
       <AppSidebar variant="floating" />
@@ -67,5 +72,6 @@ export default async function DashboardLayout({
         </main>
       </SidebarInset>
     </SidebarProvider>
+    </PermissionsProvider>
   );
 }

@@ -5,6 +5,7 @@ import * as React from "react"
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
+import { usePermissions } from "@/components/permissions-provider"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
@@ -62,10 +63,12 @@ const data = {
         {
           title: "Front Desk",
           url: "/dashboard/front-desk",
+          requiredPermission: "checkin.perform",
         },
         {
           title: "Folios",
           url: "/dashboard/folios",
+          requiredPermission: "folios.view",
         },
       ],
     },
@@ -79,18 +82,22 @@ const data = {
         {
           title: "Rooms",
           url: "/dashboard/rooms",
+          requiredPermission: "rooms.view",
         },
         {
           title: "Guests",
           url: "/dashboard/guests",
+          requiredPermission: "guests.view",
         },
         {
           title: "Staff",
           url: "/dashboard/staff",
+          requiredPermission: "staff.view",
         },
         {
           title: "Reservations",
           url: "/dashboard/reservations",
+          requiredPermission: "reservations.view",
         },
       ],
     },
@@ -104,34 +111,42 @@ const data = {
         {
           title: "Rates",
           url: "/dashboard/rates",
+          requiredPermission: "rates.view",
         },
         {
           title: "Packages",
           url: "/dashboard/rates/packages",
+          requiredPermission: "rates.view",
         },
         {
           title: "Seasons",
           url: "/dashboard/rates/seasons",
+          requiredPermission: "rates.view",
         },
         {
           title: "Channels",
           url: "/dashboard/channels",
+          requiredPermission: "rates.manage",
         },
         {
           title: "Pricing",
           url: "/dashboard/pricing",
+          requiredPermission: "rates.manage",
         },
         {
           title: "Corporate",
           url: "/dashboard/corporate",
+          requiredPermission: "rates.view",
         },
         {
           title: "Loyalty",
           url: "/dashboard/loyalty",
+          requiredPermission: "rates.view",
         },
         {
           title: "Agents",
           url: "/dashboard/agents",
+          requiredPermission: "rates.manage",
         },
       ],
     },
@@ -145,90 +160,112 @@ const data = {
         {
           title: "Check-in",
           url: "/dashboard/front-desk",
+          requiredPermission: "checkin.perform",
         },
         {
           title: "Arrivals & Departures",
           url: "/dashboard/arrivals-departures",
+          requiredPermission: "reservations.view",
         },
         {
           title: "Room Board",
           url: "/dashboard/room-board",
+          requiredPermission: "rooms.view",
         },
         {
           title: "Housekeeping",
           url: "/dashboard/housekeeping",
+          requiredPermission: "housekeeping.view",
         },
         {
           title: "Work Orders",
           url: "/dashboard/work-orders",
+          requiredPermission: "work_orders.view",
         },
         {
           title: "Assets",
           url: "/dashboard/assets",
+          requiredPermission: "settings.manage",
         },
         {
           title: "Tasks",
           url: "/dashboard/tasks",
+          requiredPermission: "tasks.view",
         },
         {
           title: "Lost & Found",
           url: "/dashboard/lost-found",
+          requiredPermission: "lost_found.view",
         },
         {
           title: "Linen",
           url: "/dashboard/linen",
+          requiredPermission: "linen.manage",
         },
         {
           title: "Minibar",
           url: "/dashboard/minibar",
+          requiredPermission: "minibar.manage",
         },
         {
           title: "Wake-up Calls",
           url: "/dashboard/front-desk/wake-up-calls",
+          requiredPermission: "concierge.manage",
         },
         {
           title: "DND Log",
           url: "/dashboard/dnd-log",
+          requiredPermission: "dnd.manage",
         },
         {
           title: "Night Audit",
           url: "/dashboard/night-audit",
+          requiredPermission: "night_audit.run",
         },
         {
           title: "Cashier",
           url: "/dashboard/cashier",
+          requiredPermission: "cash_shift.manage",
         },
         {
           title: "Concierge",
           url: "/dashboard/concierge",
+          requiredPermission: "concierge.view",
         },
         {
           title: "Messaging",
           url: "/dashboard/messaging",
+          requiredPermission: "messaging.view",
         },
         {
           title: "Pre-arrival",
           url: "/dashboard/pre-arrival",
+          requiredPermission: "pre_arrival.view",
         },
         {
           title: "VIP Guests",
           url: "/dashboard/guests/vip",
+          requiredPermission: "guests.view",
         },
         {
           title: "Guest Feedback",
           url: "/dashboard/feedback",
+          requiredPermission: "feedback.view",
         },
         {
           title: "Digital Keys",
           url: "/dashboard/keys",
+          requiredPermission: "keys.manage",
         },
         {
           title: "Room Move",
           url: "/dashboard/front-desk/room-move",
+          requiredPermission: "checkin.perform",
         },
         {
           title: "Company Ledger",
           url: "/dashboard/folios/company",
+          requiredPermission: "folios.view",
         },
       ],
     },
@@ -242,26 +279,32 @@ const data = {
         {
           title: "General",
           url: "/dashboard/settings/general",
+          requiredPermission: "settings.view",
         },
         {
           title: "Properties",
           url: "/dashboard/settings/property",
+          requiredPermission: "settings.view",
         },
         {
           title: "Roles & Permissions",
           url: "/dashboard/settings/roles",
+          requiredPermission: "settings.view",
         },
         {
           title: "Staff",
           url: "/dashboard/settings/staff",
+          requiredPermission: "settings.view",
         },
         {
           title: "Notifications",
           url: "/dashboard/settings/notifications",
+          requiredPermission: "settings.view",
         },
         {
           title: "Billing",
           url: "/dashboard/settings/billing",
+          requiredPermission: "settings.view",
         },
       ],
     },
@@ -334,6 +377,21 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { hasPermission } = usePermissions();
+
+  const filteredNavMain = data.navMain.map((group) => {
+    return {
+      ...group,
+      items: group.items?.filter(
+        (item: any) => !item.requiredPermission || hasPermission(item.requiredPermission)
+      ),
+    };
+  }).filter((group) => !group.items || group.items.length > 0);
+
+  const filteredProjects = data.projects.filter(
+    (project: any) => !project.requiredPermission || hasPermission(project.requiredPermission)
+  );
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -344,8 +402,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavMain items={filteredNavMain} />
+        <NavProjects projects={filteredProjects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

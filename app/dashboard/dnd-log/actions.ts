@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess } from "@/lib/pms/property-context";
 
 const ToggleDndSchema = z.object({
   propertyId: z.string().uuid(),
@@ -12,6 +13,7 @@ const ToggleDndSchema = z.object({
 });
 
 export async function getDndContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [roomsRes, logsRes] = await Promise.all([
@@ -54,6 +56,8 @@ export async function toggleRoomDnd(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid DND input" };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
   const {

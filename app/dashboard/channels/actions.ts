@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const ConnectChannelSchema = z.object({
   propertyId: z.string().uuid(),
@@ -26,7 +27,24 @@ const ProcessOtaSchema = z.object({
   totalRateMinor: z.coerce.number().int().min(0),
 });
 
+async function ensureConnectionInActiveProperty(channelConnectionId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("channel_connections")
+    .select("id")
+    .eq("id", channelConnectionId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Channel connection not found for the active property");
+  }
+}
+
 export async function getChannelsContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [connectionsRes, bookingsRes, roomTypesRes] = await Promise.all([
@@ -70,6 +88,8 @@ export async function connectChannel(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid channel" };
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -106,6 +126,8 @@ export async function syncAvailability(formData: FormData) {
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid sync request" };
 
+  await ensureConnectionInActiveProperty(parsed.data.channelConnectionId);
+
   const error = await setSyncTime(parsed.data.channelConnectionId);
   if (error) return { error: error.message };
 
@@ -118,6 +140,8 @@ export async function syncRates(formData: FormData) {
     channelConnectionId: formData.get("channelConnectionId"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid sync request" };
+
+  await ensureConnectionInActiveProperty(parsed.data.channelConnectionId);
 
   const error = await setSyncTime(parsed.data.channelConnectionId);
   if (error) return { error: error.message };
@@ -141,6 +165,8 @@ export async function processOTABooking(formData: FormData) {
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid OTA payload" };
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
 

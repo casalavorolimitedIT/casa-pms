@@ -5,15 +5,33 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dispatchOutboundMessage } from "@/lib/pms/messaging";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 function buildAppUrl(path: string) {
   const base = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "http://localhost:3000";
   return `${base}${path}`;
 }
 
+async function ensureFeedbackEntryInActiveProperty(entryId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("feedback_entries")
+    .select("id")
+    .eq("id", entryId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Feedback entry not found for the active property");
+  }
+}
+
 // ─── Read ───────────────────────────────────────────────────────────────────
 
 export async function getFeedbackContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const reservationIds = await supabase
@@ -71,6 +89,8 @@ export async function sendFeedbackSurvey(formData: FormData) {
   });
 
   if (!parsed.success) throw new Error("Invalid feedback survey data");
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
 
@@ -154,6 +174,8 @@ export async function escalateFeedback(formData: FormData) {
 
   if (!parsed.success) throw new Error("Invalid escalation data");
 
+  await ensureFeedbackEntryInActiveProperty(parsed.data.entryId);
+
   const supabase = await createClient();
   await supabase
     .from("feedback_entries")
@@ -181,6 +203,8 @@ export async function resolveFeedbackIssue(formData: FormData) {
   });
 
   if (!parsed.success) throw new Error("Invalid resolution data");
+
+  await ensureFeedbackEntryInActiveProperty(parsed.data.entryId);
 
   const supabase = await createClient();
   const {

@@ -102,7 +102,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
                         <div>
                           <p className="font-medium text-zinc-900">{connection.channel_name}</p>
                           <p className="text-xs text-zinc-500">
-                            Last sync: {connection.last_sync_at ? new Date(connection.last_sync_at).toLocaleString() : "Never"}
+                            Last sync: {connection.last_sync_at ? new Date(connection.last_sync_at).toLocaleString("en-GB") : "Never"}
                           </p>
                         </div>
                         <Badge variant={connection.status === "connected" ? "outline" : "secondary"}>{connection.status}</Badge>

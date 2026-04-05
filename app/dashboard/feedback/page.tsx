@@ -234,7 +234,7 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
                           {getGuestName((res as { guests?: unknown } | null)?.guests)}
                         </p>
                         <p className="text-xs text-zinc-400">
-                          Sent {tk.sent_at ? new Date(tk.sent_at).toLocaleDateString() : "—"}
+                          Sent {tk.sent_at ? new Date(tk.sent_at).toLocaleDateString("en-GB") : "—"}
                         </p>
                         <a
                           href={surveyUrl}
@@ -286,7 +286,7 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
                           {getGuestName((res as { guests?: unknown } | null)?.guests)}
                         </p>
                         <p className="text-xs text-zinc-400">
-                          {new Date(entry.created_at).toLocaleDateString()}
+                          {new Date(entry.created_at).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                       <span
@@ -354,7 +354,7 @@ export default async function FeedbackPage({ searchParams }: FeedbackPageProps) 
 
                     {entry.status === "resolved" && entry.resolved_at && (
                       <p className="text-xs text-emerald-600">
-                        Resolved on {new Date(entry.resolved_at).toLocaleDateString()}
+                        Resolved on {new Date(entry.resolved_at).toLocaleDateString("en-GB")}
                       </p>
                     )}
                   </div>

@@ -234,7 +234,7 @@ export default async function KeysPage({ searchParams }: KeysPageProps) {
                           </p>
                           {key.valid_until && (
                             <p className="text-xs text-zinc-400">
-                              Until: {new Date(key.valid_until).toLocaleString()}
+                              Until: {new Date(key.valid_until).toLocaleString("en-GB")}
                             </p>
                           )}
                         </div>
@@ -291,22 +291,22 @@ export default async function KeysPage({ searchParams }: KeysPageProps) {
                       <div className="mt-2 ml-2 space-y-1">
                         {key.issued_at && (
                           <p className="text-xs text-zinc-400">
-                            Issued: {new Date(key.issued_at).toLocaleString()}
+                            Issued: {new Date(key.issued_at).toLocaleString("en-GB")}
                           </p>
                         )}
                         {key.valid_from && (
                           <p className="text-xs text-zinc-400">
-                            Valid from: {new Date(key.valid_from).toLocaleString()}
+                            Valid from: {new Date(key.valid_from).toLocaleString("en-GB")}
                           </p>
                         )}
                         {key.valid_until && (
                           <p className="text-xs text-zinc-400">
-                            Valid until: {new Date(key.valid_until).toLocaleString()}
+                            Valid until: {new Date(key.valid_until).toLocaleString("en-GB")}
                           </p>
                         )}
                         {key.revoked_at && (
                           <p className="text-xs text-red-500">
-                            Revoked: {new Date(key.revoked_at).toLocaleString()}
+                            Revoked: {new Date(key.revoked_at).toLocaleString("en-GB")}
                           </p>
                         )}
                         {auditLog.length > 0 && (
@@ -314,7 +314,7 @@ export default async function KeysPage({ searchParams }: KeysPageProps) {
                             <p className="text-xs font-medium text-zinc-500">Audit log</p>
                             {auditLog.map((entry, i) => (
                               <p key={i} className="text-xs text-zinc-400">
-                                [{new Date(entry.at).toLocaleString()}] {entry.event}
+                                [{new Date(entry.at).toLocaleString("en-GB")}] {entry.event}
                                 {entry.reason ? ` — ${entry.reason}` : ""}
                               </p>
                             ))}

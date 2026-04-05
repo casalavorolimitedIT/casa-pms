@@ -123,7 +123,7 @@ export default async function ArrivalsDeparturesPage({ searchParams }: ArrivalsD
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-zinc-900">{getGuestName(item.guests)}</p>
-                        <p className="text-xs text-zinc-500">Check-in: {new Date(item.check_in).toLocaleDateString()}</p>
+                        <p className="text-xs text-zinc-500">Check-in: {new Date(item.check_in).toLocaleDateString("en-GB")}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-blue-100 text-blue-700">{item.status.replace("_", " ")}</Badge>
@@ -159,7 +159,7 @@ export default async function ArrivalsDeparturesPage({ searchParams }: ArrivalsD
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-zinc-900">{getGuestName(item.guests)}</p>
-                        <p className="text-xs text-zinc-500">Check-out: {new Date(item.check_out).toLocaleDateString()}</p>
+                        <p className="text-xs text-zinc-500">Check-out: {new Date(item.check_out).toLocaleDateString("en-GB")}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className="bg-amber-100 text-amber-800">{item.status.replace("_", " ")}</Badge>

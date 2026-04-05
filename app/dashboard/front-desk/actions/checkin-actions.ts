@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { initializePayment } from "@/lib/payments/provider";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 
 const CheckInSchema = z.object({
   reservationId: z.string().uuid(),
@@ -28,6 +29,15 @@ const RoomMoveSchema = z.object({
   toRoomId: z.string().uuid(),
   note: z.string().max(500).optional(),
 });
+
+async function getActivePropertyIdOrThrow() {
+  const activePropertyId = await getActivePropertyId();
+  if (!activePropertyId) {
+    throw new Error("No active property selected");
+  }
+
+  return activePropertyId;
+}
 
 export async function getFrontDeskSnapshot(propertyId: string) {
   const supabase = await createClient();
@@ -65,6 +75,7 @@ export async function getFrontDeskSnapshot(propertyId: string) {
 
 export async function getCheckInReservationContext(reservationId: string) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
 
   const { data: reservation } = await supabase
     .from("reservations")
@@ -72,6 +83,7 @@ export async function getCheckInReservationContext(reservationId: string) {
       "id, property_id, status, check_in, check_out, guests(id, first_name, last_name), reservation_rooms(room_type_id, room_id)",
     )
     .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
     .single();
 
   if (!reservation) return { reservation: null, availableRooms: [] };
@@ -95,6 +107,7 @@ export async function getCheckInReservationContext(reservationId: string) {
 
 export async function confirmCheckIn(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = CheckInSchema.safeParse({
     reservationId: formData.get("reservationId"),
     roomId: formData.get("roomId"),
@@ -111,8 +124,9 @@ export async function confirmCheckIn(formData: FormData) {
 
   const { data: reservation } = await supabase
     .from("reservations")
-    .select("id, status")
+    .select("id, status, property_id")
     .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
     .single();
 
   if (!reservation) return { error: "Reservation not found" };
@@ -154,6 +168,7 @@ export async function confirmCheckIn(formData: FormData) {
 
 export async function getCheckOutReservationContext(reservationId: string) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
 
   const { data: reservation } = await supabase
     .from("reservations")
@@ -161,6 +176,7 @@ export async function getCheckOutReservationContext(reservationId: string) {
       "id, property_id, status, check_in, check_out, guests(first_name,last_name), reservation_rooms(room_id, rooms(room_number))",
     )
     .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
     .single();
 
   if (!reservation) return { reservation: null, folio: null, charges: [], payments: [] };
@@ -207,6 +223,7 @@ export async function getCheckOutReservationContext(reservationId: string) {
 
 export async function confirmCheckOut(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = CheckOutSchema.safeParse({
     reservationId: formData.get("reservationId"),
     folioId: formData.get("folioId"),
@@ -218,6 +235,24 @@ export async function confirmCheckOut(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const { reservationId, folioId, paymentMethod, amountMinor, currency, email } = parsed.data;
+
+  const { data: reservation } = await supabase
+    .from("reservations")
+    .select("id, property_id")
+    .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
+    .single();
+
+  if (!reservation) return { error: "Reservation not found for the active property" };
+
+  const { data: scopedFolio } = await supabase
+    .from("folios")
+    .select("id")
+    .eq("id", folioId)
+    .eq("reservation_id", reservationId)
+    .single();
+
+  if (!scopedFolio) return { error: "Folio not found for this reservation" };
 
   let provider = "manual";
   let providerReference: string | null = null;
@@ -269,6 +304,7 @@ export async function confirmCheckOut(formData: FormData) {
 
 export async function moveRoom(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = RoomMoveSchema.safeParse({
     reservationId: formData.get("reservationId"),
     toRoomId: formData.get("toRoomId"),
@@ -278,6 +314,15 @@ export async function moveRoom(formData: FormData) {
 
   const { reservationId, toRoomId } = parsed.data;
 
+  const { data: reservation } = await supabase
+    .from("reservations")
+    .select("id, property_id")
+    .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
+    .single();
+
+  if (!reservation) return { error: "Reservation not found for the active property" };
+
   const { data: reservationRoom } = await supabase
     .from("reservation_rooms")
     .select("room_id")
@@ -285,6 +330,15 @@ export async function moveRoom(formData: FormData) {
     .single();
 
   const fromRoomId = reservationRoom?.room_id;
+
+  const { data: destinationRoom } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("id", toRoomId)
+    .eq("property_id", activePropertyId)
+    .single();
+
+  if (!destinationRoom) return { error: "Destination room not found for the active property" };
 
   await supabase.from("reservation_rooms").update({ room_id: toRoomId }).eq("reservation_id", reservationId);
 

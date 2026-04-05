@@ -75,7 +75,7 @@ export default async function GuestDetailPage({ params, searchParams }: GuestDet
           </div>
           <p className="text-sm text-muted-foreground">
             Guest since{" "}
-            {new Date(guest.created_at).toLocaleDateString("en-US", {
+            {new Date(guest.created_at).toLocaleDateString("en-GB", {
               month: "long",
               year: "numeric",
             })}
@@ -101,7 +101,7 @@ export default async function GuestDetailPage({ params, searchParams }: GuestDet
             label="Date of Birth"
             value={
               guest.date_of_birth
-                ? new Date(guest.date_of_birth).toLocaleDateString()
+                ? new Date(guest.date_of_birth).toLocaleDateString("en-GB")
                 : null
             }
           />

@@ -213,7 +213,7 @@ export default async function PreArrivalPage({ searchParams }: PreArrivalPagePro
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <p className="font-medium text-zinc-900">{guestName}</p>
-                              <p className="text-xs text-zinc-500">{new Date(response.created_at).toLocaleString()}</p>
+                              <p className="text-xs text-zinc-500">{new Date(response.created_at).toLocaleString("en-GB")}</p>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {response.arrival_time ? (

@@ -147,11 +147,11 @@ export default async function MinibarPage({ searchParams }: MinibarPageProps) {
                     <li key={row.id} className="rounded-lg border border-zinc-200 p-3 text-sm">
                       <p className="font-medium text-zinc-900">{row.item_name}</p>
                       <p className="text-zinc-600">
-                        {getGuestName((row.reservations as { guests?: unknown } | Array<{ guests?: unknown }> | null)?.[0]?.guests ?? (row.reservations as { guests?: unknown } | null)?.guests)}
+                        {getGuestName(((row.reservations as any)?.[0]?.guests) ?? ((row.reservations as any)?.guests))}
                         {room?.room_number ? ` · Room ${room.room_number}` : ""}
                       </p>
                       <p className="text-zinc-600">{formatCurrencyMinor(row.amount_minor, "USD")}</p>
-                      <p className="text-xs text-zinc-500">{new Date(row.posted_at).toLocaleString()}</p>
+                      <p className="text-xs text-zinc-500">{new Date(row.posted_at).toLocaleString("en-GB")}</p>
                     </li>
                   );
                 })}

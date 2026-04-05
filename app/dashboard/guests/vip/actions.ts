@@ -4,8 +4,54 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchOutboundMessage } from "@/lib/pms/messaging";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
+
+async function ensureGuestInActiveProperty(guestId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("guest_id", guestId)
+    .eq("property_id", activePropertyId)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Guest is not associated with the active property");
+  }
+}
+
+async function ensureVipFlagInActiveProperty(flagId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data: flag } = await supabase
+    .from("guest_vip_flags")
+    .select("id, guest_id")
+    .eq("id", flagId)
+    .maybeSingle();
+
+  if (!flag?.guest_id) {
+    throw new Error("VIP flag not found");
+  }
+
+  const { data } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("guest_id", flag.guest_id)
+    .eq("property_id", activePropertyId)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("VIP flag is not associated with the active property");
+  }
+}
 
 export async function getVipContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [flagsRes, reservationsRes] = await Promise.all([
@@ -97,6 +143,8 @@ export async function tagAsVip(formData: FormData) {
 
   if (!parsed.success) throw new Error("Invalid VIP tag data");
 
+  await ensureGuestInActiveProperty(parsed.data.guestId);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -126,6 +174,8 @@ export async function tagAsVip(formData: FormData) {
 export async function revokeVipFlag(formData: FormData) {
   const flagId = formData.get("flagId");
   if (typeof flagId !== "string" || !flagId) throw new Error("Missing flagId");
+
+  await ensureVipFlagInActiveProperty(flagId);
 
   const supabase = await createClient();
   const {
@@ -170,6 +220,8 @@ export async function createAmenityTasks(formData: FormData) {
 
   if (!parsed.success) throw new Error("Invalid amenity task data");
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const taskRows = VIP_AMENITIES.map((title) => ({
     property_id: parsed.data.propertyId,
@@ -185,6 +237,7 @@ export async function createAmenityTasks(formData: FormData) {
 // ─── Pre-arrival brief ───────────────────────────────────────────────────────
 
 export async function generateVipBrief(guestId: string) {
+  await ensureGuestInActiveProperty(guestId);
   const data = await getGuestBriefData(guestId);
   const { guest, preferences, reservations, flag } = data;
 
@@ -233,6 +286,9 @@ export async function sendVipArrivalNotice(formData: FormData) {
     message: formData.get("message"),
   });
   if (!parsed.success) throw new Error("Invalid notification data");
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
+  await ensureGuestInActiveProperty(parsed.data.guestId);
 
   const supabase = await createClient();
   const { data: guest } = await supabase

@@ -140,7 +140,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   ]);
 
   const today = new Date();
-  const monthLabel = today.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const monthLabel = today.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const activeDate = today.getDate();
   const params = (await searchParams) ?? {};
   const activePeriod = readSearchValue(params.period) ?? "today";

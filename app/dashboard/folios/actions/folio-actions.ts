@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 
 const AddChargeSchema = z.object({
   folioId: z.string().uuid(),
@@ -32,6 +33,34 @@ const TransferChargeSchema = z.object({
   chargeId: z.string().uuid(),
 });
 
+async function getActivePropertyIdOrThrow() {
+  const activePropertyId = await getActivePropertyId();
+  if (!activePropertyId) {
+    throw new Error("No active property selected");
+  }
+
+  return activePropertyId;
+}
+
+async function folioBelongsToProperty(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  folioId: string,
+  propertyId: string,
+) {
+  const { data, error } = await supabase
+    .from("folios")
+    .select("id, reservations!inner(property_id)")
+    .eq("id", folioId)
+    .eq("reservations.property_id", propertyId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Boolean(data?.id);
+}
+
 export async function getFolios(propertyId: string, query = "") {
   const supabase = await createClient();
 
@@ -54,13 +83,15 @@ export async function getFolios(propertyId: string, query = "") {
 
 export async function getFolioById(folioId: string) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const [folioRes, chargesRes, paymentsRes] = await Promise.all([
     supabase
       .from("folios")
       .select(
-        "id, status, currency_code, created_at, reservations(id, check_in, check_out, guests(first_name,last_name,email))",
+        "id, status, currency_code, created_at, reservations!inner(id, property_id, check_in, check_out, guests(first_name,last_name,email))",
       )
       .eq("id", folioId)
+      .eq("reservations.property_id", activePropertyId)
       .single(),
     supabase
       .from("folio_charges")
@@ -84,6 +115,7 @@ export async function getFolioById(folioId: string) {
 
 export async function addFolioCharge(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = AddChargeSchema.safeParse({
     folioId: formData.get("folioId"),
     amountMinor: formData.get("amountMinor"),
@@ -91,6 +123,9 @@ export async function addFolioCharge(formData: FormData) {
     description: formData.get("description"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid charge input" };
+
+  const inScope = await folioBelongsToProperty(supabase, parsed.data.folioId, activePropertyId);
+  if (!inScope) return { error: "Folio not found for the active property" };
 
   const { error } = await supabase.from("folio_charges").insert({
     folio_id: parsed.data.folioId,
@@ -106,6 +141,7 @@ export async function addFolioCharge(formData: FormData) {
 
 export async function addFolioPayment(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = AddPaymentSchema.safeParse({
     folioId: formData.get("folioId"),
     amountMinor: formData.get("amountMinor"),
@@ -114,6 +150,9 @@ export async function addFolioPayment(formData: FormData) {
     providerReference: formData.get("providerReference"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid payment input" };
+
+  const inScope = await folioBelongsToProperty(supabase, parsed.data.folioId, activePropertyId);
+  if (!inScope) return { error: "Folio not found for the active property" };
 
   const { error } = await supabase.from("folio_payments").insert({
     folio_id: parsed.data.folioId,
@@ -130,6 +169,11 @@ export async function addFolioPayment(formData: FormData) {
 
 export async function closeFolio(folioId: string) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
+
+  const inScope = await folioBelongsToProperty(supabase, folioId, activePropertyId);
+  if (!inScope) return { error: "Folio not found for the active property" };
+
   const { error } = await supabase.from("folios").update({ status: "closed" }).eq("id", folioId);
   if (error) return { error: error.message };
   revalidatePath(`/dashboard/folios/${folioId}`);
@@ -139,6 +183,7 @@ export async function closeFolio(folioId: string) {
 
 export async function splitFolioCharge(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = SplitChargeSchema.safeParse({
     folioId: formData.get("folioId"),
     chargeId: formData.get("chargeId"),
@@ -149,6 +194,9 @@ export async function splitFolioCharge(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid split input" };
   }
+
+  const inScope = await folioBelongsToProperty(supabase, parsed.data.folioId, activePropertyId);
+  if (!inScope) return { error: "Folio not found for the active property" };
 
   const { data: originalCharge, error: chargeError } = await supabase
     .from("folio_charges")
@@ -192,6 +240,7 @@ export async function splitFolioCharge(formData: FormData) {
 
 export async function transferFolioCharge(formData: FormData) {
   const supabase = await createClient();
+  const activePropertyId = await getActivePropertyIdOrThrow();
   const parsed = TransferChargeSchema.safeParse({
     fromFolioId: formData.get("fromFolioId"),
     toFolioId: formData.get("toFolioId"),
@@ -204,6 +253,15 @@ export async function transferFolioCharge(formData: FormData) {
 
   if (parsed.data.fromFolioId === parsed.data.toFolioId) {
     return { error: "Destination folio must be different from source folio." };
+  }
+
+  const [sourceInScope, destinationInScope] = await Promise.all([
+    folioBelongsToProperty(supabase, parsed.data.fromFolioId, activePropertyId),
+    folioBelongsToProperty(supabase, parsed.data.toFolioId, activePropertyId),
+  ]);
+
+  if (!sourceInScope || !destinationInScope) {
+    return { error: "Both folios must belong to the active property" };
   }
 
   const { data: charge, error: chargeError } = await supabase

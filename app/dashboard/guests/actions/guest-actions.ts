@@ -83,6 +83,68 @@ export async function createGuest(formData: FormData) {
   return { id: data.id };
 }
 
+/**
+ * Lightweight guest creation for inline "Quick Add Guest" dialogs.
+ * Takes only firstName, lastName + optional email/phone.
+ * Returns the created guest's id and display label — no redirect.
+ */
+export async function createGuestQuick(formData: FormData): Promise<
+  | { error: string }
+  | { id: string; firstName: string; lastName: string; email: string | null }
+> {
+  const supabase = await createClient();
+
+  const QuickSchema = z.object({
+    firstName: z.string().min(1, "First name is required").max(80),
+    lastName: z.string().min(1, "Last name is required").max(80),
+    email: z.string().email("Invalid email address").optional().or(z.literal("")),
+    phone: z.string().max(30).optional().or(z.literal("")),
+  });
+
+  const parsed = QuickSchema.safeParse({
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const formOrganizationId = formData.get("organizationId");
+  const organizationId =
+    typeof formOrganizationId === "string" && formOrganizationId.trim().length > 0
+      ? formOrganizationId.trim()
+      : await getUserOrganizationId();
+
+  if (!organizationId) {
+    return { error: "No organization linked to your account." };
+  }
+
+  const { data, error } = await supabase
+    .from("guests")
+    .insert({
+      first_name: parsed.data.firstName,
+      last_name: parsed.data.lastName,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone || null,
+      organization_id: organizationId,
+    })
+    .select("id, first_name, last_name, email")
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/guests");
+  return {
+    id: data.id,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    email: data.email,
+  };
+}
+
 export async function updateGuest(id: string, formData: FormData) {
   const supabase = await createClient();
 

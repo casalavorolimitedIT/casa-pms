@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateAgentSchema = z.object({
   propertyId: z.string().uuid(),
@@ -33,7 +34,24 @@ function calculateCommissionMinor(totalRateMinor: number | null, commissionPerce
   return Math.round(totalRateMinor * (commissionPercent / 100));
 }
 
+async function ensureCommissionInActiveProperty(commissionId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("travel_agent_commissions")
+    .select("id")
+    .eq("id", commissionId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Commission record not found for the active property");
+  }
+}
+
 export async function getAgentsContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [agentsRes, reservationsRes, commissionsRes] = await Promise.all([
@@ -89,6 +107,8 @@ export async function createAgent(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid agent profile" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const { error } = await supabase.from("travel_agents").insert({
     property_id: parsed.data.propertyId,
@@ -119,6 +139,8 @@ export async function assignAgentRate(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid commission assignment" };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const supabase = await createClient();
   const { data: reservation, error: reservationError } = await supabase
@@ -160,6 +182,8 @@ export async function updateCommissionStatus(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid payout status" };
   }
+
+  await ensureCommissionInActiveProperty(parsed.data.commissionId);
 
   const supabase = await createClient();
   const { error } = await supabase

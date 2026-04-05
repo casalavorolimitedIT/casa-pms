@@ -261,7 +261,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                             </div>
                             <p className="mt-3 text-sm text-zinc-700">{thread.last_message_preview || "No message preview yet"}</p>
                             <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
-                              <span>{new Date(thread.last_message_at).toLocaleString()}</span>
+                              <span>{new Date(thread.last_message_at).toLocaleString("en-GB")}</span>
                               <span>{thread.unread_count > 0 ? `${thread.unread_count} unread` : "Seen"}</span>
                             </div>
                           </Link>
@@ -311,7 +311,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                       <p className="mt-2 font-medium text-zinc-900">{getGuestName(activeThread.guests)}</p>
                       <p className="mt-1">Email: {activeGuest?.email || "Not on file"}</p>
                       <p className="mt-1">Phone: {activeGuest?.phone || "Not on file"}</p>
-                      <p className="mt-3 text-xs text-zinc-500">Last activity {new Date(activeThread.last_message_at).toLocaleString()}</p>
+                      <p className="mt-3 text-xs text-zinc-500">Last activity {new Date(activeThread.last_message_at).toLocaleString("en-GB")}</p>
                     </div>
 
                     <div className="rounded-2xl border border-zinc-200 bg-white p-4">
@@ -342,7 +342,7 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
                               <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-zinc-500">
                                 <span>{message.direction}</span>
                                 <span>{message.status}</span>
-                                <span>{new Date(message.created_at).toLocaleString()}</span>
+                                <span>{new Date(message.created_at).toLocaleString("en-GB")}</span>
                               </div>
                               <p className="mt-2 text-sm leading-6 text-zinc-900">{message.body}</p>
                               {message.template_key ? <p className="mt-2 text-xs text-zinc-500">Template: {message.template_key}</p> : null}

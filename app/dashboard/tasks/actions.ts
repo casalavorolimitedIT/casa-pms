@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const CreateTaskSchema = z.object({
   propertyId: z.string().uuid(),
@@ -20,7 +21,26 @@ const UpdateTaskStatusSchema = z.object({
   status: z.enum(["todo", "in_progress", "done"]),
 });
 
+async function ensureTaskInActiveProperty(taskId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("id", taskId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Task not found for the active property");
+  }
+
+  return activePropertyId;
+}
+
 export async function getTaskBoardContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -85,6 +105,8 @@ export async function createTask(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid task input" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("tasks").insert({
@@ -114,6 +136,8 @@ export async function updateTaskStatus(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid status update" };
   }
+
+  await ensureTaskInActiveProperty(parsed.data.taskId);
 
   const supabase = await createClient();
 

@@ -122,7 +122,7 @@ export default async function GeneralSettingsPage({ searchParams }: Props) {
                   Created
                 </dt>
                 <dd className="text-sm text-zinc-700">
-                  {new Date(orgResult.settings.createdAt).toLocaleDateString(undefined, {
+                  {new Date(orgResult.settings.createdAt).toLocaleDateString("en-GB", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",

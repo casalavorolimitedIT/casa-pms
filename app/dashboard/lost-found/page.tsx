@@ -153,7 +153,7 @@ export default async function LostFoundPage({ searchParams }: LostFoundPageProps
                         <div>
                           <p className="font-medium text-zinc-900">{item.item_name}</p>
                           <p className="text-xs text-zinc-500">
-                            {room?.room_number ? `Room ${room.room_number}` : "No room"} · Found {new Date(item.found_at).toLocaleString()}
+                            {room?.room_number ? `Room ${room.room_number}` : "No room"} · Found {new Date(item.found_at).toLocaleString("en-GB")}
                           </p>
                         </div>
                         <Badge className={STATUS_TONE[item.status] ?? STATUS_TONE.logged}>{item.status.replaceAll("_", " ")}</Badge>

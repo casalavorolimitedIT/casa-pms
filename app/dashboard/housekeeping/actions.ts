@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const AssignmentSchema = z.object({
   propertyId: z.string().uuid(),
@@ -25,7 +26,24 @@ type AssignmentRow = {
   created_at: string;
 };
 
+async function ensureRoomInActiveProperty(roomId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("id", roomId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Room not found for the active property");
+  }
+}
+
 export async function getHousekeepingBoardContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data: property } = await supabase
@@ -116,6 +134,8 @@ export async function upsertHousekeepingAssignment(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid assignment input" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
 
   const { data: latest } = await supabase
@@ -154,6 +174,8 @@ export async function updateHousekeepingRoomStatus(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid status input" };
   }
+
+  await ensureRoomInActiveProperty(parsed.data.roomId);
 
   const supabase = await createClient();
   const {

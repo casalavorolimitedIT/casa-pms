@@ -3,10 +3,28 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
+
+async function ensureKeyInActiveProperty(keyId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("digital_keys")
+    .select("id")
+    .eq("id", keyId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Digital key not found for the active property");
+  }
+}
 
 // ─── Read ───────────────────────────────────────────────────────────────────
 
 export async function getKeyContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [keysRes, reservationsRes, roomsRes] = await Promise.all([
@@ -64,6 +82,8 @@ export async function issueDigitalKey(formData: FormData) {
 
   if (!parsed.success) throw new Error("Invalid key issue data");
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -110,6 +130,8 @@ export async function revokeKey(formData: FormData) {
 
   if (!parsed.success) throw new Error("Invalid revoke data");
 
+  await ensureKeyInActiveProperty(parsed.data.keyId);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -147,6 +169,7 @@ export async function revokeKey(formData: FormData) {
 // ─── Get single key status ───────────────────────────────────────────────────
 
 export async function getKeyStatus(keyId: string) {
+  await ensureKeyInActiveProperty(keyId);
   const supabase = await createClient();
   const { data } = await supabase
     .from("digital_keys")

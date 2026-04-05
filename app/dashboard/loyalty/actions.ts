@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 const EarnSchema = z.object({
   guestId: z.string().uuid(),
@@ -44,7 +45,25 @@ async function getOrCreateAccount(guestId: string) {
   return created;
 }
 
+async function ensureGuestInActiveProperty(guestId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("guest_id", guestId)
+    .eq("property_id", activePropertyId)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Guest is not associated with the active property");
+  }
+}
+
 export async function getLoyaltyContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [accountsRes, ledgerRes, guestPoolRes] = await Promise.all([
@@ -104,6 +123,8 @@ export async function earnPoints(formData: FormData) {
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid points payload" };
 
+  await ensureGuestInActiveProperty(parsed.data.guestId);
+
   const supabase = await createClient();
   const account = await getOrCreateAccount(parsed.data.guestId);
 
@@ -140,6 +161,8 @@ export async function redeemPoints(formData: FormData) {
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid redemption payload" };
+
+  await ensureGuestInActiveProperty(parsed.data.guestId);
 
   const supabase = await createClient();
   const account = await getOrCreateAccount(parsed.data.guestId);
@@ -180,6 +203,8 @@ export async function upgradeTier(formData: FormData) {
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid tier update" };
+
+  await ensureGuestInActiveProperty(parsed.data.guestId);
 
   const supabase = await createClient();
   const account = await getOrCreateAccount(parsed.data.guestId);

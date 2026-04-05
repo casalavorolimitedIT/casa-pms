@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess } from "@/lib/pms/property-context";
 
 const PostMinibarSchema = z.object({
   propertyId: z.string().uuid(),
@@ -14,6 +15,7 @@ const PostMinibarSchema = z.object({
 });
 
 export async function getMinibarContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const [postingsRes, reservationsRes] = await Promise.all([
@@ -52,10 +54,34 @@ export async function postMinibarCharge(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid minibar charge input" };
   }
 
+  await assertActivePropertyAccess(parsed.data.propertyId);
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const { data: scopedReservation } = await supabase
+    .from("reservations")
+    .select("id")
+    .eq("id", parsed.data.reservationId)
+    .eq("property_id", parsed.data.propertyId)
+    .maybeSingle();
+
+  if (!scopedReservation) {
+    return { error: "Reservation not found for the active property" };
+  }
+
+  const { data: scopedRoom } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("id", parsed.data.roomId)
+    .eq("property_id", parsed.data.propertyId)
+    .maybeSingle();
+
+  if (!scopedRoom) {
+    return { error: "Room not found for the active property" };
+  }
 
   let { data: folio } = await supabase
     .from("folios")

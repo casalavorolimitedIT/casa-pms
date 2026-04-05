@@ -91,7 +91,7 @@ export default async function LoyaltyPage({ searchParams }: LoyaltyPageProps) {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-medium text-zinc-900">{getGuestName(entry.guests)}</p>
-                          <p className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString()}</p>
+                          <p className="text-xs text-zinc-500">{new Date(entry.created_at).toLocaleString("en-GB")}</p>
                         </div>
                         <Badge variant="outline">{entry.entry_type}</Badge>
                       </div>

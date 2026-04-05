@@ -82,8 +82,8 @@ export function RestrictionsTable({
                 <tr key={row.id}>
                   <td className="px-3 py-2">{roomTypeMap.get(row.room_type_id) ?? "Room Type"}</td>
                   <td className="px-3 py-2 font-medium text-zinc-900">{formatCurrencyMinor(row.rate_minor, currencyCode)}</td>
-                  <td className="px-3 py-2">{new Date(row.date_from).toLocaleDateString()}</td>
-                  <td className="px-3 py-2">{new Date(row.date_to).toLocaleDateString()}</td>
+                  <td className="px-3 py-2">{new Date(row.date_from).toLocaleDateString("en-GB")}</td>
+                  <td className="px-3 py-2">{new Date(row.date_to).toLocaleDateString("en-GB")}</td>
                   <td className="px-3 py-2">{row.min_stay ?? "-"}</td>
                   <td className="px-3 py-2">{row.max_stay ?? "-"}</td>
                   <td className="px-3 py-2">{row.closed_to_arrival ? "Yes" : "No"}</td>

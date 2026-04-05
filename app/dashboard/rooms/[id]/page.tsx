@@ -142,7 +142,7 @@ export default async function RoomDetailPage({ params, searchParams }: RoomDetai
               </p>
               <p>
                 <span className="text-muted-foreground">Created: </span>
-                <span className="font-medium">{new Date(room.created_at).toLocaleDateString()}</span>
+                <span className="font-medium">{new Date(room.created_at).toLocaleDateString("en-GB")}</span>
               </p>
               {roomType?.description ? (
                 <p>

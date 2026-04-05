@@ -235,7 +235,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                           <p className="font-medium text-zinc-900">{order.title}</p>
                           <p className="text-xs text-zinc-500">
                             {order.category} · {room?.room_number ? `Room ${room.room_number}` : "No room"}
-                            {order.due_at ? ` · Due ${new Date(order.due_at).toLocaleString()}` : ""}
+                            {order.due_at ? ` · Due ${new Date(order.due_at).toLocaleString("en-GB")}` : ""}
                           </p>
                         </div>
                         <div className="flex gap-1">

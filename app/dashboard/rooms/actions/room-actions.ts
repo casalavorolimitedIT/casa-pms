@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { assertActivePropertyAccess, requireActivePropertyId } from "@/lib/pms/property-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -39,6 +40,24 @@ const RoomStatusSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+async function ensureRoomInActiveProperty(roomId: string) {
+  const supabase = await createClient();
+  const activePropertyId = await requireActivePropertyId();
+
+  const { data } = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("id", roomId)
+    .eq("property_id", activePropertyId)
+    .maybeSingle();
+
+  if (!data) {
+    throw new Error("Room not found for the active property");
+  }
+
+  return activePropertyId;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Room Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +76,8 @@ export async function createRoomType(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const { data, error } = await supabase
     .from("room_types")
@@ -90,6 +111,8 @@ export async function updateRoomType(id: string, formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const { error } = await supabase
     .from("room_types")
@@ -126,6 +149,8 @@ export async function createRoom(formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message };
   }
+
+  await assertActivePropertyAccess(parsed.data.propertyId);
 
   const { data, error } = await supabase
     .from("rooms")
@@ -166,6 +191,8 @@ export async function updateRoomStatus(formData: FormData) {
     return { error: parsed.error.issues[0]?.message };
   }
 
+  await ensureRoomInActiveProperty(parsed.data.roomId);
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -192,6 +219,7 @@ export async function updateRoomStatus(formData: FormData) {
 }
 
 export async function getRooms(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -211,6 +239,7 @@ export async function getRooms(propertyId: string) {
 }
 
 export async function getRoomTypes(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
   const supabase = await createClient();
 
   const { data, error } = await supabase

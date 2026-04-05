@@ -184,7 +184,7 @@ export default async function StaffDetailPage({ params, searchParams }: StaffDet
               <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-zinc-900">Current status</p>
-                  <p className="text-xs text-muted-foreground">Joined {new Date(member.joinedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">Joined {new Date(member.joinedAt).toLocaleDateString("en-GB")}</p>
                 </div>
                 <Badge variant={member.isActive ? "default" : "secondary"} className="rounded-full px-3 py-1">
                   {member.isActive ? "Active" : "Inactive"}

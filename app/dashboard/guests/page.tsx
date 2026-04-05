@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/server";
+import { requirePermission, hasPermission } from "@/lib/staff/server-permissions";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 
 const DEMO_ORG_ID = process.env.DEMO_ORG_ID ?? "";
 
@@ -15,6 +17,13 @@ interface GuestsPageProps {
 
 export default async function GuestsPage({ searchParams }: GuestsPageProps) {
   await redirectIfNotAuthenticated();
+  const activePropertyId = await getActivePropertyId();
+  if (activePropertyId) {
+    await requirePermission("guests.view", activePropertyId);
+  } else {
+    await requirePermission("guests.view"); // Will throw or use cookie
+  }
+
   const supabase = await createClient();
 
   const { q = "" } = await searchParams;
@@ -43,6 +52,8 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
 
   const { guests } = await searchGuests(organizationId, q);
 
+  const canCreate = activePropertyId ? await hasPermission(activePropertyId, "guests.create") : false;
+
   return (
     <div className="page-shell">
       <div className="page-container">
@@ -55,9 +66,11 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
             {q ? ` for "${q}"` : ""}
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/guests/new">Add Guest</Link>
-        </Button>
+        {canCreate && (
+          <Button asChild size="sm">
+            <Link href="/dashboard/guests/new">Add Guest</Link>
+          </Button>
+        )}
       </div>
 
       {/* Search form */}
@@ -85,9 +98,11 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
             <p className="text-muted-foreground">
               {q ? "No guests match your search." : "No guests yet."}
             </p>
-            <Button asChild size="sm">
-              <Link href="/dashboard/guests/new">Add first guest</Link>
-            </Button>
+            {canCreate && (
+              <Button asChild size="sm">
+                <Link href="/dashboard/guests/new">Add first guest</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

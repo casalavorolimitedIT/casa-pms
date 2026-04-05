@@ -122,9 +122,9 @@ export function RoomsFilters({
         <label htmlFor="rooms-floor" className="text-sm font-medium text-zinc-900">Floor</label>
         <Combobox
           items={floorOptions}
-          selectionMode="single"
-          selectedValue={selectedFloor}
-          onSelectedValueChange={(value) => setFloor(value?.value ?? "")}
+          
+          value={selectedFloor}
+          onValueChange={(value) => setFloor(value?.value ?? "")}
         >
           <ComboboxInput
             id="rooms-floor"

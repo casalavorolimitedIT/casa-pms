@@ -24,6 +24,7 @@ interface DeleteModalProps {
   itemName?: string;
   isLoading?: boolean;
   confirmText?: string;
+  loadingText?: string;
   cancelText?: string;
   variant?: "danger" | "warning";
   icon?: React.ReactNode;
@@ -41,6 +42,7 @@ export function DeleteModal({
   itemName,
   isLoading = false,
   confirmText = "Delete",
+  loadingText = "Deleting...",
   cancelText = "Cancel",
   variant = "danger",
   icon,
@@ -213,7 +215,7 @@ export function DeleteModal({
                 !loading && "hover:scale-105",
               )}
             >
-              {loading ? <>Deleting...</> : <>{confirmText}</>}
+              {loading ? <>{loadingText}</> : <>{confirmText}</>}
             </Button>
           </DialogFooter>
         </div>
