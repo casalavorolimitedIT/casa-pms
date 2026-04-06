@@ -3,7 +3,6 @@ import { Geist_Mono, Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { DevTools } from "@/components/dev-tools";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -38,7 +37,6 @@ export default function RootLayout({
       >
         <TooltipProvider>
           {children}
-          {process.env.NODE_ENV === "development" && <DevTools />}
           <Toaster position="top-right" closeButton />
         </TooltipProvider>
       </body>

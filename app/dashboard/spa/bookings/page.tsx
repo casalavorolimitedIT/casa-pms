@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { hasPermission } from "@/lib/staff/server-permissions";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { WorkflowStepperSheet } from "@/components/custom/workflow-stepper-sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -47,7 +49,7 @@ export default async function SpaBookingsPage({ searchParams }: SpaBookingsPageP
 
   const serviceOptions = context.services.map((service) => ({
     value: service.id,
-    label: `${service.name} · ${service.duration_min} min`,
+    label: `${service.name} · ${service.duration_minutes} min`,
   }));
 
   const therapistOptions = context.therapists.map((therapist) => ({
@@ -121,9 +123,33 @@ export default async function SpaBookingsPage({ searchParams }: SpaBookingsPageP
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
 
-        <div className="space-y-1">
-          <h1 className="page-title">Spa Bookings</h1>
-          <p className="page-subtitle">Book services with therapist and room capacity checks, then settle to folio or standalone.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="page-title">Spa Bookings</h1>
+            <p className="page-subtitle">Book services with therapist and room capacity checks, then settle to folio or standalone.</p>
+          </div>
+          <PageHelpDialog
+            className="border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            pageName="Spa bookings"
+            summary="This page is the operational booking desk for spa appointments, from scheduling to posting charges and settlement."
+            responsibilities={[
+              "Create a complete booking in one guided flow with validation against therapist qualification, shift windows, and room availability.",
+              "Reassign therapists and settle bookings either as spa-only payments or to hotel folios.",
+              "Monitor recent and upcoming appointments without leaving the booking board.",
+            ]}
+            relatedPages={[
+              {
+                href: "/dashboard/spa/services",
+                label: "Spa Services",
+                description: "Defines treatment durations and pricing used during booking.",
+              },
+              {
+                href: "/dashboard/spa/therapists",
+                label: "Spa Therapists",
+                description: "Controls therapist qualifications and shifts that determine booking availability.",
+              },
+            ]}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
@@ -133,51 +159,114 @@ export default async function SpaBookingsPage({ searchParams }: SpaBookingsPageP
           <Metric title="Bookings" value={context.bookings.length} />
         </div>
 
-        <Card className="glass-panel mt-8">
-          <CardHeader><CardTitle className="text-base">Create Spa Booking</CardTitle></CardHeader>
-          <CardContent>
-            <form action={createAction} className="grid gap-3 md:grid-cols-2">
-              <input type="hidden" name="propertyId" value={propertyId} />
+        <Card className="glass-panel mt-8 border-zinc-200/80 bg-linear-to-br from-white via-zinc-50/60 to-white">
+          <CardHeader>
+            <CardTitle className="text-base">Create Spa Booking</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-zinc-900">One modal. Four numbered steps.</p>
+              <p className="text-sm text-zinc-600">
+                Open the guided workflow to complete the booking without jumping across multiple screens.
+              </p>
+            </div>
+            <WorkflowStepperSheet
+              title="New Spa Booking"
+              description="Follow the numbered steps to create and validate a booking in one uninterrupted flow."
+              triggerLabel="Open booking workflow"
+              steps={[
+                {
+                  title: "Select service and slot",
+                  description: "Choose treatment, therapist, room, and start time.",
+                },
+                {
+                  title: "Link stay or guest",
+                  description: "Attach reservation and/or guest when applicable.",
+                },
+                {
+                  title: "Capture notes",
+                  description: "Add preferences and safety context for delivery.",
+                },
+                {
+                  title: "Confirm booking",
+                  description: "Submit once and let validations run server-side.",
+                },
+              ]}
+            >
+              <form action={createAction} className="grid gap-6">
+                <input type="hidden" name="propertyId" value={propertyId} />
 
-              <div className="grid gap-2">
-                <Label htmlFor="serviceId">Service</Label>
-                <FormSelectField name="serviceId" options={serviceOptions} placeholder="Select service" />
-              </div>
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">1</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Select service and slot</h2>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-serviceId">Service</Label>
+                      <FormSelectField name="serviceId" options={serviceOptions} placeholder="Select service" />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="therapistId">Therapist</Label>
-                <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
-              </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-therapistId">Therapist</Label>
+                      <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="roomId">Treatment Room</Label>
-                <FormSelectField name="roomId" options={roomOptions} placeholder="Select room" />
-              </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-roomId">Treatment Room</Label>
+                      <FormSelectField name="roomId" options={roomOptions} placeholder="Select room" />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="startsAt">Start Date & Time</Label>
-                <Input id="startsAt" name="startsAt" type="datetime-local" required />
-              </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-startsAt">Start Date & Time</Label>
+                      <Input id="workflow-startsAt" name="startsAt" type="datetime-local" required />
+                    </div>
+                  </div>
+                </section>
 
-              <div className="grid gap-2">
-                <Label htmlFor="reservationId">Reservation (optional)</Label>
-                <FormSelectField name="reservationId" options={reservationOptions} placeholder="No reservation link" />
-              </div>
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">2</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Link stay or guest</h2>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-reservationId">Reservation (optional)</Label>
+                      <FormSelectField name="reservationId" options={reservationOptions} placeholder="No reservation link" />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="guestId">Guest (optional)</Label>
-                <FormSelectField name="guestId" options={guestOptions} placeholder="No guest link" />
-              </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="workflow-guestId">Guest (optional)</Label>
+                      <FormSelectField name="guestId" options={guestOptions} placeholder="No guest link" />
+                    </div>
+                  </div>
+                </section>
 
-              <div className="grid gap-2 md:col-span-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" rows={2} placeholder="Preferences, special handling, contraindications" />
-              </div>
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">3</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Capture notes</h2>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="workflow-notes">Notes</Label>
+                    <Textarea id="workflow-notes" name="notes" rows={3} placeholder="Preferences, special handling, contraindications" />
+                  </div>
+                </section>
 
-              <div className="md:col-span-2">
-                <FormSubmitButton idleText="Create booking" pendingText="Saving..." className="w-full sm:w-auto" />
-              </div>
-            </form>
+                <section className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">4</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Confirm booking</h2>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-zinc-600">
+                    On submit, the system verifies qualification, shift coverage, and overlaps before confirming.
+                  </p>
+                  <div className="mt-3">
+                    <FormSubmitButton idleText="Create booking" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </div>
+                </section>
+              </form>
+            </WorkflowStepperSheet>
           </CardContent>
         </Card>
 

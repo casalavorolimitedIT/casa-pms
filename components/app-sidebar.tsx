@@ -275,6 +275,11 @@ const data = {
       ),
       items: [
         {
+          title: "Spa Services",
+          url: "/dashboard/spa/services",
+          requiredPermission: "spa.manage",
+        },
+        {
           title: "Spa Bookings",
           url: "/dashboard/spa/bookings",
           requiredPermission: "spa.manage",
@@ -282,6 +287,11 @@ const data = {
         {
           title: "Spa Therapists",
           url: "/dashboard/spa/therapists",
+          requiredPermission: "spa.manage",
+        },
+        {
+          title: "Spa Treatment Rooms",
+          url: "/dashboard/spa/rooms",
           requiredPermission: "spa.manage",
         },
         {

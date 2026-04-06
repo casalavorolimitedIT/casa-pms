@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { WorkflowStepperSheet } from "@/components/custom/workflow-stepper-sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -65,9 +67,33 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
 
-        <div className="space-y-1">
-          <h1 className="page-title">Corporate Accounts</h1>
-          <p className="page-subtitle">Manage account profiles, negotiated rates, invoice cycles, and posted payments.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="page-title">Corporate Accounts</h1>
+            <p className="page-subtitle">Manage account profiles, negotiated rates, invoice cycles, and posted payments.</p>
+          </div>
+          <PageHelpDialog
+            className="border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            pageName="Corporate accounts"
+            summary="This page handles negotiated corporate sales flow from account setup to billing and collections."
+            responsibilities={[
+              "Create corporate profiles with credit boundaries.",
+              "Assign negotiated discounts to rate plans.",
+              "Generate invoice cycles and post payments to open balances.",
+            ]}
+            relatedPages={[
+              {
+                href: "/dashboard/rates",
+                label: "Rates",
+                description: "Rate plans are used when assigning corporate discounts.",
+              },
+              {
+                href: "/dashboard/folios",
+                label: "Folios",
+                description: "Invoice settlements may map to folio-level accounting workflows.",
+              },
+            ]}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -75,6 +101,106 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
           <Metric title="Open Invoices" value={context.summary.openInvoices} />
           <Metric title="Receivable" value={formatCurrencyMinor(context.summary.receivableMinor, "USD")} />
         </div>
+
+        <Card className="glass-panel border-zinc-200/80 bg-linear-to-br from-white via-zinc-50/70 to-white">
+          <CardHeader>
+            <CardTitle className="text-base">Corporate Workflow</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-zinc-900">Run the corporate lifecycle from one guided side panel.</p>
+              <p className="text-sm text-zinc-600">Create account, assign rates, and generate invoices in one numbered flow.</p>
+            </div>
+            <WorkflowStepperSheet
+              title="Corporate Lifecycle"
+              description="Complete key corporate setup and billing actions from a single modal workflow."
+              triggerLabel="Open corporate workflow"
+              steps={[
+                { title: "Create account", description: "Register corporate profile and credit limit." },
+                { title: "Assign negotiated rate", description: "Attach discount to a rate plan." },
+                { title: "Generate monthly invoice", description: "Create bill for selected period." },
+              ]}
+            >
+              <div className="grid gap-6">
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">1</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Create account</h2>
+                  </div>
+                  <form action={createAccountAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={activePropertyId} />
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-name">Company Name</Label>
+                      <Input id="wf-name" name="name" placeholder="Acme Corporate Travel" required />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-creditLimitMinor">Credit Limit (minor)</Label>
+                      <Input id="wf-creditLimitMinor" type="number" name="creditLimitMinor" min="0" defaultValue="0" required />
+                    </div>
+                    <FormSubmitButton idleText="Create" pendingText="Saving..." />
+                  </form>
+                </section>
+
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">2</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Assign negotiated rate</h2>
+                  </div>
+                  <form action={assignRateAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={activePropertyId} />
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-corporateAccountId">Corporate Account</Label>
+                      <FormSelectField
+                        name="corporateAccountId"
+                        options={context.accounts.map((account) => ({ value: account.id, label: account.name }))}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-ratePlanId">Rate Plan</Label>
+                      <FormSelectField
+                        name="ratePlanId"
+                        options={context.ratePlans.map((plan) => ({ value: plan.id, label: plan.name }))}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-discountPercent">Discount %</Label>
+                      <Input id="wf-discountPercent" name="discountPercent" type="number" min="0" max="100" step="0.01" required />
+                    </div>
+                    <FormSubmitButton idleText="Assign" pendingText="Saving..." variant="outline" />
+                  </form>
+                </section>
+
+                <section className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">3</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Generate monthly invoice</h2>
+                  </div>
+                  <form action={generateInvoiceAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={activePropertyId} />
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="wf-generateCorporateAccountId">Corporate Account</Label>
+                      <FormSelectField
+                        name="corporateAccountId"
+                        options={context.accounts.map((account) => ({ value: account.id, label: account.name }))}
+                      />
+                    </div>
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="wf-periodStart">Period Start</Label>
+                        <Input id="wf-periodStart" type="date" name="periodStart" required />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="wf-periodEnd">Period End</Label>
+                        <Input id="wf-periodEnd" type="date" name="periodEnd" required />
+                      </div>
+                    </div>
+                    <FormSubmitButton idleText="Generate" pendingText="Generating..." variant="outline" />
+                  </form>
+                </section>
+              </div>
+            </WorkflowStepperSheet>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
           <Card className="border-zinc-200">
@@ -119,86 +245,14 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
           </Card>
 
           <div className="space-y-6">
-            <Card className="border-zinc-200">
+            <Card className="border-zinc-200 bg-zinc-50/60">
               <CardHeader>
-                <CardTitle className="text-base">Create Account</CardTitle>
+                <CardTitle className="text-base">Workflow Note</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={createAccountAction} className="grid gap-3">
-                  <input type="hidden" name="propertyId" value={activePropertyId} />
-                  <div className="grid gap-1.5">
-                    <Label>Company Name</Label>
-                    <Input name="name" placeholder="Acme Corporate Travel" required />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label>Credit Limit (minor)</Label>
-                    <Input type="number" name="creditLimitMinor" min="0" defaultValue="0" required />
-                  </div>
-                  <FormSubmitButton idleText="Create" pendingText="Saving..." />
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="border-zinc-200">
-              <CardHeader>
-                <CardTitle className="text-base">Assign Corporate Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form action={assignRateAction} className="grid gap-3">
-                  <input type="hidden" name="propertyId" value={activePropertyId} />
-                  <div className="grid gap-1.5">
-                    <Label>Corporate Account</Label>
-                    <FormSelectField
-                      name="corporateAccountId"
-                      options={context.accounts.map((account) => ({ value: account.id, label: account.name }))}
-                    />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label>Rate Plan</Label>
-                    <FormSelectField
-                      name="ratePlanId"
-                      options={context.ratePlans.map((plan) => ({ value: plan.id, label: plan.name }))}
-                    />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label>Discount %</Label>
-                    <Input name="discountPercent" type="number" min="0" max="100" step="0.01" required />
-                  </div>
-                  <FormSubmitButton idleText="Assign" pendingText="Saving..." variant="outline" />
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="border-zinc-200">
-              <CardHeader>
-                <CardTitle className="text-base">Generate Monthly Invoice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form action={generateInvoiceAction} className="grid gap-3">
-                  <input type="hidden" name="propertyId" value={activePropertyId} />
-                  <div className="grid gap-1.5">
-                    <Label>Corporate Account</Label>
-                    <FormSelectField
-                      name="corporateAccountId"
-                      options={context.accounts.map((account) => ({ value: account.id, label: account.name }))}
-                    />
-                  </div>
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    <div className="grid gap-1.5">
-                      <Label>Period Start</Label>
-                      <Input type="date" name="periodStart" required />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label>Period End</Label>
-                      <Input type="date" name="periodEnd" required />
-                    </div>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Invoices include reservations linked via active corporate-assigned rate plans, or reservation source tags
-                    containing the company name or <span className="font-medium">corporate:&lt;account-id&gt;</span>.
-                  </p>
-                  <FormSubmitButton idleText="Generate" pendingText="Generating..." variant="outline" />
-                </form>
+                <p className="text-sm leading-6 text-zinc-600">
+                  Core setup and invoice generation are now available in the guided workflow. Invoice-level payment posting remains inline beside each invoice record for faster collections processing.
+                </p>
               </CardContent>
             </Card>
           </div>

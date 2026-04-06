@@ -2,12 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { WorkflowStepperSheet } from "@/components/custom/workflow-stepper-sheet";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { getMessagingContext, markAsRead, replyToThread, sendMessage, sendTemplate } from "./actions";
@@ -143,9 +145,28 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
     <div className="page-shell">
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
-        <div className="space-y-1">
-          <h1 className="page-title text-balance tracking-tight">Guest Messaging</h1>
-          <p className="page-subtitle">Run a unified guest inbox across outbound reminders, concierge follow-up, and inbound replies without losing reservation context.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="page-title text-balance tracking-tight">Guest Messaging</h1>
+            <p className="page-subtitle">Run a unified guest inbox across outbound reminders, concierge follow-up, and inbound replies without losing reservation context.</p>
+          </div>
+          <PageHelpDialog
+            className="border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            pageName="Guest messaging"
+            summary="This page centralizes outbound and inbound guest communication in a single thread model."
+            responsibilities={[
+              "Start new conversations tied to reservation context.",
+              "Use templates to speed up common guest responses.",
+              "Reply in-thread and keep handover continuity for staff.",
+            ]}
+            relatedPages={[
+              {
+                href: "/dashboard/reservations",
+                label: "Reservations",
+                description: "Messaging targets guests from active reservation records.",
+              },
+            ]}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -174,56 +195,121 @@ export default async function MessagingPage({ searchParams }: MessagingPageProps
 
         <div className="grid gap-4 xl:grid-cols-[0.95fr_1.35fr]">
           <div className="space-y-4">
-            <Card className="border-zinc-200">
+            <Card className="border-zinc-200 bg-linear-to-br from-white via-zinc-50/70 to-white">
               <CardHeader>
-                <CardTitle className="text-base">Start a Conversation</CardTitle>
+                <CardTitle className="text-base">Messaging Workflow</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={sendMessageAction} className="grid gap-4">
-                  <input type="hidden" name="propertyId" value={activePropertyId} />
+                <WorkflowStepperSheet
+                  title="Guest Messaging Flow"
+                  description="Compose, template, and reply from one guided side panel."
+                  triggerLabel="Open messaging workflow"
+                  memoryKey="messaging-workflow"
+                  steps={[
+                    { title: "Compose message", description: "Start a new outbound conversation." },
+                    { title: "Send template", description: "Use quick templates on selected thread." },
+                    { title: "Reply in thread", description: "Continue conversation seamlessly." },
+                  ]}
+                >
+                  <div className="grid gap-6">
+                    <section data-workflow-step="1" className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">1</span>
+                        <h2 className="text-sm font-semibold text-zinc-900">Compose message</h2>
+                      </div>
+                      <form action={sendMessageAction} className="grid gap-4">
+                        <input type="hidden" name="propertyId" value={activePropertyId} />
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="reservationId">Reservation</Label>
-                    <FormSelectField
-                      name="reservationId"
-                      placeholder="Select reservation"
-                      options={context.reservations.map((reservation) => ({
-                        value: reservation.id,
-                        label: `${getGuestName(reservation.guests)} (${reservation.status})`,
-                      }))}
-                      emptyStateText="No active reservation available for messaging."
-                      emptyStateLinkHref="/dashboard/reservations"
-                      emptyStateLinkLabel="Open reservations"
-                    />
+                        <div className="grid gap-2">
+                          <Label htmlFor="wf-reservationId">Reservation</Label>
+                          <FormSelectField
+                            name="reservationId"
+                            placeholder="Select reservation"
+                            options={context.reservations.map((reservation) => ({
+                              value: reservation.id,
+                              label: `${getGuestName(reservation.guests)} (${reservation.status})`,
+                            }))}
+                            emptyStateText="No active reservation available for messaging."
+                            emptyStateLinkHref="/dashboard/reservations"
+                            emptyStateLinkLabel="Open reservations"
+                          />
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="grid gap-2">
+                            <Label htmlFor="wf-channel">Channel</Label>
+                            <FormSelectField
+                              name="channel"
+                              defaultValue="sms"
+                              options={[
+                                { value: "sms", label: "SMS" },
+                                { value: "whatsapp", label: "WhatsApp" },
+                                { value: "email", label: "Email" },
+                              ]}
+                            />
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label htmlFor="wf-externalAddress">Override Destination</Label>
+                            <Input id="wf-externalAddress" name="externalAddress" placeholder="Optional phone or email override" />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="wf-body">Message</Label>
+                          <Textarea id="wf-body" name="body" required placeholder="Hello, your room is ready. Reply here if you need airport pickup or dining arrangements before arrival." />
+                        </div>
+
+                        <FormSubmitButton idleText="Send Message" pendingText="Sending message..." />
+                      </form>
+                    </section>
+
+                    <section data-workflow-step="2" className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">2</span>
+                        <h2 className="text-sm font-semibold text-zinc-900">Send template</h2>
+                      </div>
+                      {!activeThread ? (
+                        <p className="text-sm text-zinc-500">Select a thread in the inbox to send templates.</p>
+                      ) : (
+                        <div className="grid gap-2">
+                          {context.templates.map((template) => (
+                            <form key={template.key} action={sendTemplateAction}>
+                              <input type="hidden" name="threadId" value={activeThread.id} />
+                              <input type="hidden" name="templateKey" value={template.key} />
+                              <FormSubmitButton
+                                idleText={template.label}
+                                pendingText="Sending template..."
+                                variant="outline"
+                                className="w-full justify-start border-zinc-200 bg-white text-left text-sm text-zinc-700"
+                              />
+                            </form>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+
+                    <section data-workflow-step="3" className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">3</span>
+                        <h2 className="text-sm font-semibold text-zinc-900">Reply in thread</h2>
+                      </div>
+                      {!activeThread ? (
+                        <p className="text-sm text-zinc-500">Open a thread to send a direct reply.</p>
+                      ) : (
+                        <form action={replyAction} className="grid gap-3">
+                          <input type="hidden" name="threadId" value={activeThread.id} />
+                          <div className="space-y-1">
+                            <Label htmlFor="wf-reply-body">Reply</Label>
+                            <p className="text-xs text-zinc-500">Use the existing delivery address to keep the same thread active.</p>
+                          </div>
+                          <Textarea id="wf-reply-body" name="body" required placeholder="Thanks for the update. We have coordinated with housekeeping and will message again when the room is ready." />
+                          <FormSubmitButton idleText="Send Reply" pendingText="Sending reply..." />
+                        </form>
+                      )}
+                    </section>
                   </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="channel">Channel</Label>
-                      <FormSelectField
-                        name="channel"
-                        defaultValue="sms"
-                        options={[
-                          { value: "sms", label: "SMS" },
-                          { value: "whatsapp", label: "WhatsApp" },
-                          { value: "email", label: "Email" },
-                        ]}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="externalAddress">Override Destination</Label>
-                      <Input id="externalAddress" name="externalAddress" placeholder="Optional phone or email override" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="body">Message</Label>
-                    <Textarea id="body" name="body" required placeholder="Hello, your room is ready. Reply here if you need airport pickup or dining arrangements before arrival." />
-                  </div>
-
-                  <FormSubmitButton idleText="Send Message" pendingText="Sending message..." />
-                </form>
+                </WorkflowStepperSheet>
               </CardContent>
             </Card>
 

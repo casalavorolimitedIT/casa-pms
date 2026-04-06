@@ -58,6 +58,31 @@ const SettleSpaSeparatelySchema = z.object({
   reference: z.string().max(120).optional().or(z.literal("")),
 });
 
+const CreateSpaServiceSchema = z.object({
+  propertyId: z.string().uuid(),
+  name: z.string().min(2).max(120),
+  durationMin: z.coerce.number().int().min(5).max(480),
+  priceMinor: z.coerce.number().int().min(0),
+  description: z.string().max(500).optional().or(z.literal("")),
+});
+
+const UpdateSpaServiceSchema = CreateSpaServiceSchema.extend({
+  serviceId: z.string().uuid(),
+  isActive: z.coerce.boolean().default(true),
+});
+
+const CreateSpaTreatmentRoomSchema = z.object({
+  propertyId: z.string().uuid(),
+  name: z.string().min(2).max(120),
+});
+
+const UpdateSpaTreatmentRoomSchema = z.object({
+  propertyId: z.string().uuid(),
+  roomId: z.string().uuid(),
+  name: z.string().min(2).max(120),
+  isActive: z.coerce.boolean().default(true),
+});
+
 const SellMembershipSchema = z.object({
   propertyId: z.string().uuid(),
   guestId: z.string().uuid(),
@@ -217,7 +242,7 @@ export async function createSpaBooking(formData: FormData) {
 
   const { data: service, error: serviceErr } = await supabase
     .from("spa_services")
-    .select("id, duration_min, price_minor")
+    .select("id, duration_minutes, price_minor")
     .eq("id", parsed.data.serviceId)
     .eq("property_id", parsed.data.propertyId)
     .maybeSingle();
@@ -227,7 +252,7 @@ export async function createSpaBooking(formData: FormData) {
 
   const startsAtDate = new Date(parsed.data.startsAt);
   if (Number.isNaN(startsAtDate.getTime())) return { error: "Invalid booking start time" };
-  const endsAtDate = new Date(startsAtDate.getTime() + service.duration_min * 60_000);
+  const endsAtDate = new Date(startsAtDate.getTime() + service.duration_minutes * 60_000);
 
   const startsAtIso = startsAtDate.toISOString();
   const endsAtIso = endsAtDate.toISOString();
@@ -705,7 +730,7 @@ export async function getSpaBookingsContext(propertyId: string) {
   const supabase = await createClient();
 
   const [servicesRes, therapistsRes, roomsRes, bookingsRes, reservationsRes, guests] = await Promise.all([
-    supabase.from("spa_services").select("id, name, duration_min, price_minor").eq("property_id", propertyId).eq("is_active", true).order("name"),
+    supabase.from("spa_services").select("id, name, duration_minutes, price_minor").eq("property_id", propertyId).eq("is_active", true).order("name"),
     supabase.from("spa_therapists").select("id, display_name, is_active").eq("property_id", propertyId).eq("is_active", true).order("display_name"),
     supabase.from("spa_treatment_rooms").select("id, name, is_active").eq("property_id", propertyId).eq("is_active", true).order("name"),
     supabase
@@ -795,4 +820,140 @@ export async function getSpaMembershipsContext(propertyId: string) {
     guests,
     reservations: reservationsRes.data ?? [],
   };
+}
+
+// ─── Spa Services ────────────────────────────────────────────────────────────
+
+export async function getSpaServicesContext(propertyId: string) {
+  const supabase = await createClient();
+  await assertActivePropertyAccess(propertyId);
+
+  const [servicesRes] = await Promise.all([
+    supabase
+      .from("spa_services")
+      .select("id, name, duration_minutes, price_minor, description, is_active")
+      .eq("property_id", propertyId)
+      .order("name", { ascending: true }),
+  ]);
+
+  return {
+    services: servicesRes.data ?? [],
+  };
+}
+
+export async function createSpaService(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  const parsed = CreateSpaServiceSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const { propertyId, name, durationMin, priceMinor, description } = parsed.data;
+  const supabase = await createClient();
+  await requirePermission("spa.manage", propertyId);
+
+  const { error } = await supabase.from("spa_services").insert({
+    property_id: propertyId,
+    name,
+    duration_minutes: durationMin,
+    price_minor: priceMinor,
+    description: description || null,
+    is_active: true,
+  });
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/dashboard/spa/services");
+  revalidatePath("/dashboard/spa/bookings");
+  return { success: true };
+}
+
+export async function updateSpaService(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  const parsed = UpdateSpaServiceSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const { serviceId, propertyId, name, durationMin, priceMinor, description, isActive } = parsed.data;
+  const supabase = await createClient();
+  await requirePermission("spa.manage", propertyId);
+
+  const { error } = await supabase
+    .from("spa_services")
+    .update({
+      name,
+      duration_minutes: durationMin,
+      price_minor: priceMinor,
+      description: description || null,
+      is_active: isActive,
+    })
+    .eq("id", serviceId)
+    .eq("property_id", propertyId);
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/dashboard/spa/services");
+  revalidatePath("/dashboard/spa/bookings");
+  return { success: true };
+}
+
+// ─── Spa Treatment Rooms ─────────────────────────────────────────────────────
+
+export async function getSpaTreatmentRoomsContext(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("spa_treatment_rooms")
+    .select("id, name, is_active, created_at")
+    .eq("property_id", propertyId)
+    .order("name", { ascending: true });
+
+  return {
+    rooms: data ?? [],
+  };
+}
+
+export async function createSpaTreatmentRoom(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  const parsed = CreateSpaTreatmentRoomSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const { propertyId, name } = parsed.data;
+  await assertActivePropertyAccess(propertyId);
+  await requirePermission("spa.manage", propertyId);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("spa_treatment_rooms").insert({
+    property_id: propertyId,
+    name,
+    is_active: true,
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/dashboard/spa/rooms");
+  revalidatePath("/dashboard/spa/bookings");
+  return { success: true };
+}
+
+export async function updateSpaTreatmentRoom(formData: FormData) {
+  const raw = Object.fromEntries(formData);
+  const parsed = UpdateSpaTreatmentRoomSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const { propertyId, roomId, name, isActive } = parsed.data;
+  await assertActivePropertyAccess(propertyId);
+  await requirePermission("spa.manage", propertyId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("spa_treatment_rooms")
+    .update({
+      name,
+      is_active: isActive,
+    })
+    .eq("id", roomId)
+    .eq("property_id", propertyId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/dashboard/spa/rooms");
+  revalidatePath("/dashboard/spa/bookings");
+  return { success: true };
 }

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { hasPermission } from "@/lib/staff/server-permissions";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { WorkflowStepperSheet } from "@/components/custom/workflow-stepper-sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -74,9 +76,33 @@ export default async function SpaTherapistsPage({ searchParams }: SpaTherapistsP
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
 
-        <div className="space-y-1">
-          <h1 className="page-title">Spa Therapists</h1>
-          <p className="page-subtitle">Manage therapist profiles, service qualifications, and shift availability windows.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="page-title">Spa Therapists</h1>
+            <p className="page-subtitle">Manage therapist profiles, service qualifications, and shift availability windows.</p>
+          </div>
+          <PageHelpDialog
+            className="border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            pageName="Spa therapists"
+            summary="This page controls who can perform services and when they are available for booking."
+            responsibilities={[
+              "Add therapist profiles for scheduling and reporting.",
+              "Map each therapist to the services they are qualified to deliver.",
+              "Define working windows and availability states for booking validation.",
+            ]}
+            relatedPages={[
+              {
+                href: "/dashboard/spa/services",
+                label: "Spa Services",
+                description: "Services determine qualification options.",
+              },
+              {
+                href: "/dashboard/spa/bookings",
+                label: "Spa Bookings",
+                description: "Bookings rely on therapist qualifications and shift coverage.",
+              },
+            ]}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -85,77 +111,100 @@ export default async function SpaTherapistsPage({ searchParams }: SpaTherapistsP
           <Metric title="Shifts" value={context.shifts.length} />
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Create Therapist</CardTitle></CardHeader>
-            <CardContent>
-              <form action={createTherapistAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input id="displayName" name="displayName" placeholder="Therapist name" required />
-                </div>
-                <FormSubmitButton idleText="Create therapist" pendingText="Saving..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
+        <Card className="glass-panel mt-8 border-zinc-200/80 bg-linear-to-br from-white via-zinc-50/70 to-white">
+          <CardHeader><CardTitle className="text-base">Therapist Workflow</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-zinc-900">Set up therapist operations in one side flow.</p>
+              <p className="text-sm text-zinc-600">Create profile, map qualifications, and publish shifts without switching between cards.</p>
+            </div>
+            <WorkflowStepperSheet
+              title="Therapist Setup"
+              description="Use the guided sequence to fully onboard and schedule therapists."
+              triggerLabel="Open therapist workflow"
+              steps={[
+                { title: "Create therapist", description: "Add a therapist profile for the property." },
+                { title: "Assign qualification", description: "Map therapist to service skills." },
+                { title: "Add shift", description: "Publish availability windows for bookings." },
+              ]}
+            >
+              <div className="grid gap-6">
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">1</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Create therapist</h2>
+                  </div>
+                  <form action={createTherapistAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-displayName">Display Name</Label>
+                      <Input id="wf-displayName" name="displayName" placeholder="Therapist name" required />
+                    </div>
+                    <FormSubmitButton idleText="Create therapist" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
 
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Assign Qualification</CardTitle></CardHeader>
-            <CardContent>
-              <form action={addQualificationAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="therapistId">Therapist</Label>
-                  <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="serviceId">Service</Label>
-                  <FormSelectField name="serviceId" options={serviceOptions} placeholder="Select service" />
-                </div>
-                <FormSubmitButton idleText="Save qualification" pendingText="Saving..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
+                <section className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">2</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Assign qualification</h2>
+                  </div>
+                  <form action={addQualificationAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-therapistId">Therapist</Label>
+                      <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-serviceId">Service</Label>
+                      <FormSelectField name="serviceId" options={serviceOptions} placeholder="Select service" />
+                    </div>
+                    <FormSubmitButton idleText="Save qualification" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
 
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Add Shift</CardTitle></CardHeader>
-            <CardContent>
-              <form action={shiftAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="shiftTherapist">Therapist</Label>
-                  <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="startsAt">Starts</Label>
-                  <Input id="startsAt" name="startsAt" type="datetime-local" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="endsAt">Ends</Label>
-                  <Input id="endsAt" name="endsAt" type="datetime-local" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="status">Status</Label>
-                  <FormSelectField
-                    name="status"
-                    defaultValue="available"
-                    options={[
-                      { value: "available", label: "Available" },
-                      { value: "blocked", label: "Blocked" },
-                      { value: "off", label: "Off" },
-                    ]}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" name="notes" rows={2} />
-                </div>
-                <FormSubmitButton idleText="Save shift" pendingText="Saving..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                <section className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">3</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Add shift</h2>
+                  </div>
+                  <form action={shiftAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-shiftTherapist">Therapist</Label>
+                      <FormSelectField name="therapistId" options={therapistOptions} placeholder="Select therapist" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-startsAt">Starts</Label>
+                      <Input id="wf-startsAt" name="startsAt" type="datetime-local" required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-endsAt">Ends</Label>
+                      <Input id="wf-endsAt" name="endsAt" type="datetime-local" required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-status">Status</Label>
+                      <FormSelectField
+                        name="status"
+                        defaultValue="available"
+                        options={[
+                          { value: "available", label: "Available" },
+                          { value: "blocked", label: "Blocked" },
+                          { value: "off", label: "Off" },
+                        ]}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-notes">Notes</Label>
+                      <Textarea id="wf-notes" name="notes" rows={2} />
+                    </div>
+                    <FormSubmitButton idleText="Save shift" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
+              </div>
+            </WorkflowStepperSheet>
+          </CardContent>
+        </Card>
 
         <Card className="glass-panel mt-6">
           <CardHeader><CardTitle className="text-base">Therapist Schedule Board</CardTitle></CardHeader>

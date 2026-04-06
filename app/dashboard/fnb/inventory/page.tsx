@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { hasPermission } from "@/lib/staff/server-permissions";
+import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { WorkflowStepperSheet } from "@/components/custom/workflow-stepper-sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -98,9 +100,28 @@ export default async function FnbInventoryPage({ searchParams }: InventoryPagePr
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
 
-        <div className="space-y-1">
-          <h1 className="page-title">F and B Inventory</h1>
-          <p className="page-subtitle">Track stock, record movements, manage purchase orders, and monitor low-stock alerts.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="page-title">F and B Inventory</h1>
+            <p className="page-subtitle">Track stock, record movements, manage purchase orders, and monitor low-stock alerts.</p>
+          </div>
+          <PageHelpDialog
+            className="border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            pageName="F and B inventory"
+            summary="This page controls stock integrity from corrections through procurement and receiving."
+            responsibilities={[
+              "Apply stock adjustments with operational references.",
+              "Create purchase orders against inventory demand.",
+              "Record receiving and monitor low-stock exceptions.",
+            ]}
+            relatedPages={[
+              {
+                href: "/dashboard/fnb/menus",
+                label: "F and B Menu Management",
+                description: "Menu planning and inventory planning should stay aligned.",
+              },
+            ]}
+          />
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
@@ -110,89 +131,113 @@ export default async function FnbInventoryPage({ searchParams }: InventoryPagePr
           <Metric title="Movements" value={context.movements.length} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3 mt-8">
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Adjust Stock</CardTitle></CardHeader>
-            <CardContent>
-              <form action={adjustAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="adjustItem">Item</Label>
-                  <FormSelectField name="itemId" options={itemOptions} placeholder="Select item" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="qtyDelta">Quantity Delta (+/-)</Label>
-                  <Input id="qtyDelta" name="qtyDelta" type="number" step="0.01" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="reference">Reference</Label>
-                  <Input id="reference" name="reference" placeholder="Cycle count / correction ticket" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input id="notes" name="notes" placeholder="Optional" />
-                </div>
-                <FormSubmitButton idleText="Apply adjustment" pendingText="Saving..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
+        <Card className="glass-panel mt-8 border-zinc-200/80 bg-linear-to-br from-white via-zinc-50/70 to-white">
+          <CardHeader><CardTitle className="text-base">Inventory Workflow</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-zinc-900">Manage stock operations from one guided side panel.</p>
+              <p className="text-sm text-zinc-600">Inputs and current step are restored automatically when you reopen.</p>
+            </div>
+            <WorkflowStepperSheet
+              title="Inventory Operations"
+              description="Run adjustment, PO creation, and receiving in one uninterrupted flow."
+              triggerLabel="Open inventory workflow"
+              memoryKey="fnb-inventory-workflow"
+              steps={[
+                { title: "Adjust stock", description: "Record corrections and ad hoc changes." },
+                { title: "Create purchase order", description: "Create demand-backed supplier orders." },
+                { title: "Receive purchase order", description: "Post inbound quantities to stock." },
+              ]}
+            >
+              <div className="grid gap-6">
+                <section data-workflow-step="1" className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">1</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Adjust stock</h2>
+                  </div>
+                  <form action={adjustAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-adjustItem">Item</Label>
+                      <FormSelectField name="itemId" options={itemOptions} placeholder="Select item" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-qtyDelta">Quantity Delta (+/-)</Label>
+                      <Input id="wf-qtyDelta" name="qtyDelta" type="number" step="0.01" required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-reference">Reference</Label>
+                      <Input id="wf-reference" name="reference" placeholder="Cycle count / correction ticket" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-notes">Notes</Label>
+                      <Input id="wf-notes" name="notes" placeholder="Optional" />
+                    </div>
+                    <FormSubmitButton idleText="Apply adjustment" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
 
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Create Purchase Order</CardTitle></CardHeader>
-            <CardContent>
-              <form action={createPoAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="supplier">Supplier</Label>
-                  <Input id="supplier" name="supplier" placeholder="Fresh Foods Ltd" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="expectedAt">Expected Date</Label>
-                  <FormDateTimeField name="expectedAt" includeTime={false} placeholder="Select date" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="poItem">Item</Label>
-                  <FormSelectField name="itemId" options={itemOptions} placeholder="Select item" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="qtyOrdered">Qty Ordered</Label>
-                  <Input id="qtyOrdered" name="qtyOrdered" type="number" step="0.01" min={0.01} required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="costMinor">Cost (minor units)</Label>
-                  <Input id="costMinor" name="costMinor" type="number" min={0} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="poNotes">Notes</Label>
-                  <Input id="poNotes" name="notes" placeholder="Optional" />
-                </div>
-                <FormSubmitButton idleText="Create PO" pendingText="Creating..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
+                <section data-workflow-step="2" className="space-y-3 rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">2</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Create purchase order</h2>
+                  </div>
+                  <form action={createPoAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-supplier">Supplier</Label>
+                      <Input id="wf-supplier" name="supplier" placeholder="Fresh Foods Ltd" required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-expectedAt">Expected Date</Label>
+                      <FormDateTimeField name="expectedAt" includeTime={false} placeholder="Select date" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-poItem">Item</Label>
+                      <FormSelectField name="itemId" options={itemOptions} placeholder="Select item" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-qtyOrdered">Qty Ordered</Label>
+                      <Input id="wf-qtyOrdered" name="qtyOrdered" type="number" step="0.01" min={0.01} required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-costMinor">Cost (minor units)</Label>
+                      <Input id="wf-costMinor" name="costMinor" type="number" min={0} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-poNotes">Notes</Label>
+                      <Input id="wf-poNotes" name="notes" placeholder="Optional" />
+                    </div>
+                    <FormSubmitButton idleText="Create PO" pendingText="Creating..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
 
-          <Card className="glass-panel">
-            <CardHeader><CardTitle className="text-base">Receive Purchase Order</CardTitle></CardHeader>
-            <CardContent>
-              <form action={receivePoAction} className="grid gap-3">
-                <input type="hidden" name="propertyId" value={propertyId} />
-                <div className="grid gap-2">
-                  <Label htmlFor="receivePo">Purchase Order</Label>
-                  <FormSelectField name="purchaseOrderId" options={poOptions} placeholder="Select PO" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="receiveLine">PO Line</Label>
-                  <FormSelectField name="lineId" options={poLineOptions} placeholder="Select line" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="qtyReceived">Qty Received</Label>
-                  <Input id="qtyReceived" name="qtyReceived" type="number" step="0.01" min={0.01} required />
-                </div>
-                <FormSubmitButton idleText="Record receiving" pendingText="Saving..." className="w-full sm:w-auto" />
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                <section data-workflow-step="3" className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">3</span>
+                    <h2 className="text-sm font-semibold text-zinc-900">Receive purchase order</h2>
+                  </div>
+                  <form action={receivePoAction} className="grid gap-3">
+                    <input type="hidden" name="propertyId" value={propertyId} />
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-receivePo">Purchase Order</Label>
+                      <FormSelectField name="purchaseOrderId" options={poOptions} placeholder="Select PO" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-receiveLine">PO Line</Label>
+                      <FormSelectField name="lineId" options={poLineOptions} placeholder="Select line" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="wf-qtyReceived">Qty Received</Label>
+                      <Input id="wf-qtyReceived" name="qtyReceived" type="number" step="0.01" min={0.01} required />
+                    </div>
+                    <FormSubmitButton idleText="Record receiving" pendingText="Saving..." className="w-full sm:w-auto" />
+                  </form>
+                </section>
+              </div>
+            </WorkflowStepperSheet>
+          </CardContent>
+        </Card>
 
         <Card className="glass-panel mt-6">
           <CardHeader><CardTitle className="text-base">Low-Stock Alerts</CardTitle></CardHeader>
