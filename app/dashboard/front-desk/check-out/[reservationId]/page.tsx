@@ -39,6 +39,13 @@ export default async function CheckOutPage({ params, searchParams }: PageProps) 
   const chargeTotal = ctx.charges.reduce((sum, c) => sum + c.amount_minor, 0);
   const paymentTotal = ctx.payments.reduce((sum, p) => sum + p.amount_minor, 0);
   const balance = calculateFolioBalance({ chargeTotalMinor: chargeTotal, paymentTotalMinor: paymentTotal });
+
+  // Determine if this is a late departure
+  const now = new Date();
+  const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const stdCheckOutTime = ctx.propertySettings?.checkOutTime ?? "11:00";
+  const lateFeeMinor = ctx.propertySettings?.lateCheckoutFeeMinor ?? 0;
+  const isLateDeparture = currentTimeStr > stdCheckOutTime && lateFeeMinor > 0;
   const guestRaw = ctx.reservation.guests as
     | { first_name?: string; last_name?: string }
     | Array<{ first_name?: string; last_name?: string }>
@@ -78,42 +85,82 @@ export default async function CheckOutPage({ params, searchParams }: PageProps) 
         <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Settle Balance</CardTitle></CardHeader>
           <CardContent>
-            <form action={submitCheckOut} className="grid gap-4">
-              <input type="hidden" name="reservationId" value={reservationId} />
-              <input type="hidden" name="folioId" value={ctx.folio.id} />
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="amountMinor">Amount (minor units)</Label>
-                  <Input id="amountMinor" name="amountMinor" type="number" min={0} defaultValue={Math.max(0, balance)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Input id="currency" name="currency" defaultValue={ctx.folio.currency_code} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentMethod">Payment method</Label>
-                  <FormSelectField
-                    name="paymentMethod"
-                    defaultValue="card"
-                    options={[
-                      { value: "card", label: "Card" },
-                      { value: "cash", label: "Cash" },
-                      { value: "bank_transfer", label: "Bank transfer" },
-                    ]}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email (required for card gateway)</Label>
-                  <Input id="email" name="email" type="email" placeholder="guest@email.com" />
-                </div>
+            {isLateDeparture && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                <p className="font-semibold text-amber-900">Late departure — standard check-out is {stdCheckOutTime}</p>
+                <p className="mt-0.5 text-amber-800">A late check-out fee ({lateFeeMinor} minor units) is configured. Check the box below to post it to the folio.</p>
               </div>
-
-              <div className="flex gap-2">
-                <FormSubmitButton idleText="Complete Check-out" pendingText="Checking out…" />
-                <Button type="button" variant="outline" asChild><Link href={`/dashboard/folios/${ctx.folio.id}`}>Open Folio</Link></Button>
+            )}
+            {balance <= 0 ? (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  Folio is fully settled — no outstanding balance.
+                </div>
+                <form action={submitCheckOut}>
+                  <input type="hidden" name="reservationId" value={reservationId} />
+                  <input type="hidden" name="folioId" value={ctx.folio.id} />
+                  <input type="hidden" name="amountMinor" value="0" />
+                  <input type="hidden" name="currency" value={ctx.folio.currency_code} />
+                  <input type="hidden" name="paymentMethod" value="cash" />
+                  {isLateDeparture && (
+                    <div className="mb-3 flex items-center gap-2">
+                      <input id="postLateFeeSettled" name="postLateFee" type="checkbox" className="h-4 w-4" aria-label="Post late check-out fee to folio" defaultChecked />
+                      <Label htmlFor="postLateFeeSettled">Post late check-out fee to folio</Label>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <FormSubmitButton idleText="Complete Check-out" pendingText="Checking out…" />
+                    <Button type="button" variant="outline" asChild>
+                      <Link href={`/dashboard/folios/${ctx.folio.id}`}>View Folio</Link>
+                    </Button>
+                  </div>
+                </form>
               </div>
-            </form>
+            ) : (
+              <form action={submitCheckOut} className="grid gap-4">
+                <input type="hidden" name="reservationId" value={reservationId} />
+                <input type="hidden" name="folioId" value={ctx.folio.id} />
+
+                {isLateDeparture && (
+                  <div className="flex items-center gap-2">
+                    <input id="postLateFeePending" name="postLateFee" type="checkbox" className="h-4 w-4" aria-label="Post late check-out fee to folio" defaultChecked />
+                    <Label htmlFor="postLateFeePending">Post late check-out fee to folio</Label>
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="amountMinor">Amount (minor units)</Label>
+                    <Input id="amountMinor" name="amountMinor" type="number" min={0} defaultValue={Math.max(0, balance)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="currency">Currency</Label>
+                    <Input id="currency" name="currency" defaultValue={ctx.folio.currency_code} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="paymentMethod">Payment method</Label>
+                    <FormSelectField
+                      name="paymentMethod"
+                      defaultValue="card"
+                      options={[
+                        { value: "card", label: "Card" },
+                        { value: "cash", label: "Cash" },
+                        { value: "bank_transfer", label: "Bank transfer" },
+                      ]}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email (required for card gateway)</Label>
+                    <Input id="email" name="email" type="email" placeholder="guest@email.com" />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <FormSubmitButton idleText="Complete Check-out" pendingText="Checking out…" />
+                  <Button type="button" variant="outline" asChild><Link href={`/dashboard/folios/${ctx.folio.id}`}>Open Folio</Link></Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

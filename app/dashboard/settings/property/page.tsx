@@ -91,7 +91,7 @@ export default async function PropertySettingsPage({ searchParams }: Props) {
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Properties</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Configure check-in and check-out times, currency, and timezone for each property.
+          Configure check-in and check-out times, early/late fee policies, currency, and timezone for each property.
         </p>
       </div>
 
@@ -204,6 +204,30 @@ export default async function PropertySettingsPage({ searchParams }: Props) {
                       />
                     </div>
 
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`earlyFee-${property.id}`}>Early check-in fee (minor units)</Label>
+                      <Input
+                        id={`earlyFee-${property.id}`}
+                        name="earlyCheckinFeeMinor"
+                        type="number"
+                        min={0}
+                        defaultValue={property.earlyCheckinFeeMinor}
+                      />
+                      <p className="text-xs text-zinc-500">Set to 0 to disable. Posted to folio when staff confirm at check-in.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`lateFee-${property.id}`}>Late check-out fee (minor units)</Label>
+                      <Input
+                        id={`lateFee-${property.id}`}
+                        name="lateCheckoutFeeMinor"
+                        type="number"
+                        min={0}
+                        defaultValue={property.lateCheckoutFeeMinor}
+                      />
+                      <p className="text-xs text-zinc-500">Set to 0 to disable. Posted to folio when staff confirm at check-out.</p>
+                    </div>
+
                     <div className="sm:col-span-2">
                       <FormSubmitButton
                         idleText="Save property"
@@ -219,6 +243,8 @@ export default async function PropertySettingsPage({ searchParams }: Props) {
                       { label: "Timezone", value: property.timezone },
                       { label: "Check-in", value: property.checkInTime },
                       { label: "Check-out", value: property.checkOutTime },
+                      { label: "Early check-in fee", value: property.earlyCheckinFeeMinor > 0 ? `${property.earlyCheckinFeeMinor} (minor)` : "Disabled" },
+                      { label: "Late check-out fee", value: property.lateCheckoutFeeMinor > 0 ? `${property.lateCheckoutFeeMinor} (minor)` : "Disabled" },
                     ].map((item) => (
                       <div key={item.label} className="space-y-1">
                         <dt className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500">

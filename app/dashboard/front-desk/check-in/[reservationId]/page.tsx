@@ -17,6 +17,7 @@ interface PageProps {
   searchParams?: Promise<{
     ok?: string | string[];
     error?: string | string[];
+    folioId?: string | string[];
   }>;
 }
 
@@ -30,11 +31,19 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
   const query = (await searchParams) ?? {};
   const ok = readSearchValue(query.ok);
   const error = readSearchValue(query.error);
+  const folioId = readSearchValue(query.folioId);
   const ctx = await getCheckInReservationContext(reservationId);
 
   if (!ctx.reservation) {
     return <div className="p-6 text-sm text-muted-foreground">Reservation not found.</div>;
   }
+
+  // Determine if this is an early arrival
+  const now = new Date();
+  const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const stdCheckInTime = ctx.propertySettings?.checkInTime ?? "15:00";
+  const earlyFeeMinor = ctx.propertySettings?.earlyCheckinFeeMinor ?? 0;
+  const isEarlyArrival = currentTimeStr < stdCheckInTime && earlyFeeMinor > 0;
 
   const guestRaw = ctx.reservation.guests as
     | { first_name?: string; last_name?: string }
@@ -48,7 +57,8 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
     try {
       const result = await confirmCheckIn(formData);
       if (result?.error) throw new Error(result.error);
-      redirect(`/dashboard/front-desk/check-in/${reservationId}?ok=${encodeURIComponent("Check-in completed successfully.")}`);
+      const folioPart = result.folioId ? `&folioId=${result.folioId}` : "";
+      redirect(`/dashboard/front-desk/check-in/${reservationId}?ok=${encodeURIComponent("Check-in completed successfully.")}${folioPart}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to complete check-in.";
       redirect(`/dashboard/front-desk/check-in/${reservationId}?error=${encodeURIComponent(message)}`);
@@ -70,6 +80,23 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
           checkIn={ctx.reservation.check_in}
           checkOut={ctx.reservation.check_out}
         />
+
+        {ok && folioId && (
+          <Card className="border-emerald-200 bg-emerald-50">
+            <CardContent className="pt-5">
+              <p className="font-semibold text-emerald-900">Check-in complete</p>
+              <p className="mt-1 text-sm text-emerald-800">The folio is open and ready for charges.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  <Link href={`/dashboard/folios/${folioId}`}>Open Folio →</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/dashboard/front-desk">Back to Front Desk</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Arrival Workflow</CardTitle></CardHeader>
@@ -113,6 +140,20 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
                 <Label htmlFor="paymentCurrency">Currency</Label>
                 <Input id="paymentCurrency" name="paymentCurrency" defaultValue="USD" />
               </div>
+
+              {isEarlyArrival && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                  <p className="font-semibold text-amber-900">Early arrival — standard check-in is {stdCheckInTime}</p>
+                  <p className="mt-0.5 text-amber-800">An early check-in fee ({earlyFeeMinor} minor units) is configured. Check the box below to post it to the folio.</p>
+                </div>
+              )}
+
+              {isEarlyArrival && (
+                <div className="flex items-center gap-2">
+                  <input id="postEarlyFee" name="postEarlyFee" type="checkbox" className="h-4 w-4" aria-label="Post early check-in fee to folio" defaultChecked />
+                  <Label htmlFor="postEarlyFee">Post early check-in fee to folio</Label>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <FormSubmitButton idleText="Confirm Check-in" pendingText="Checking in…" />

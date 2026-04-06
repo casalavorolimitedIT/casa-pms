@@ -1,19 +1,10 @@
-import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormSelectField } from "@/components/ui/form-select-field";
-import { FormSubmitButton } from "@/components/ui/form-submit-button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
-import { HousekeepingEvidencePanel } from "@/components/custom/housekeeping-evidence-panel";
-import {
-  getHousekeepingBoardContext,
-  upsertHousekeepingAssignment,
-  updateHousekeepingRoomStatus,
-} from "./actions";
+import { HousekeepingRoomCard } from "./housekeeping-room-card";
+import { getHousekeepingBoardContext } from "./actions";
 
 type HousekeepingPageProps = {
   searchParams?: Promise<{ ok?: string | string[]; error?: string | string[] }>;
@@ -58,15 +49,6 @@ function getPriority(room: BoardRoom, arrivalRoomIds: Set<string>) {
   return { label: "Low", className: "bg-zinc-100 text-zinc-700", score: 10 };
 }
 
-const STATUS_TONE: Record<BoardRoom["status"], string> = {
-  vacant: "bg-emerald-100 text-emerald-800",
-  occupied: "bg-blue-100 text-blue-800",
-  dirty: "bg-amber-100 text-amber-800",
-  inspection: "bg-violet-100 text-violet-800",
-  maintenance: "bg-orange-100 text-orange-800",
-  out_of_order: "bg-red-100 text-red-800",
-};
-
 function byFloorThenNumber(a: BoardRoom, b: BoardRoom) {
   const fa = a.floor ?? -1;
   const fb = b.floor ?? -1;
@@ -91,26 +73,6 @@ export default async function HousekeepingPage({ searchParams }: HousekeepingPag
   const staff = context.staff as StaffMember[];
   const arrivalRoomIds = new Set(context.arrivalRoomIds);
   const activeDndRoomIds = new Set(context.activeDndRoomIds);
-
-  const assignAction = async (formData: FormData) => {
-    "use server";
-    const result = await upsertHousekeepingAssignment(formData);
-    if (result?.success) {
-      redirect(`/dashboard/housekeeping?ok=${encodeURIComponent("Assignment updated.")}`);
-    }
-    const message = result?.error ?? "Unable to update assignment.";
-    redirect(`/dashboard/housekeeping?error=${encodeURIComponent(message)}`);
-  };
-
-  const updateStatusAction = async (formData: FormData) => {
-    "use server";
-    const result = await updateHousekeepingRoomStatus(formData);
-    if (result?.success) {
-      redirect(`/dashboard/housekeeping?ok=${encodeURIComponent("Room status updated.")}`);
-    }
-    const message = result?.error ?? "Unable to update room status.";
-    redirect(`/dashboard/housekeeping?error=${encodeURIComponent(message)}`);
-  };
 
   const priorityQueue = rooms
     .map((room) => ({
@@ -238,101 +200,17 @@ export default async function HousekeepingPage({ searchParams }: HousekeepingPag
                       {floor === -1 ? "No Floor" : `Floor ${floor}`}
                     </div>
                     <ul className="space-y-2">
-                      {floorRooms.map((room) => {
-                        const assignment = assignmentsByRoom[room.id];
-                        const assignee = staff.find((member) => member.id === assignment?.attendant_user_id);
-                        const priority = getPriority(room, arrivalRoomIds);
-
-                        return (
-                          <li key={room.id} className="rounded-lg border border-zinc-200 bg-white">
-                            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                              <div>
-                                <p className="font-medium text-zinc-900">Room {room.room_number}</p>
-                                <p className="text-xs text-zinc-500">{getRoomTypeName(room.room_types)}</p>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-1">
-                                <Badge className={STATUS_TONE[room.status]}>{room.status.replaceAll("_", " ")}</Badge>
-                                {activeDndRoomIds.has(room.id) ? <Badge className="bg-amber-100 text-amber-800">DND</Badge> : null}
-                                <Badge className={priority.className}>{priority.label}</Badge>
-                              </div>
-                            </div>
-
-                            <div className="border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600">
-                              Assignee: {assignee?.full_name?.trim() || assignee?.email || "Unassigned"} · {assignment?.status ? assignment.status.replaceAll("_", " ") : "pending"}
-                            </div>
-
-                            <details className="border-t border-zinc-200 px-3 py-2">
-                              <summary className="cursor-pointer text-xs font-medium uppercase tracking-[0.12em] text-zinc-600">Minimize / Expand Forms</summary>
-                              <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                                <form action={assignAction} className="grid gap-2 rounded-lg border border-zinc-200 p-2">
-                                  <input type="hidden" name="propertyId" value={activePropertyId} />
-                                  <input type="hidden" name="roomId" value={room.id} />
-
-                                  <div className="grid gap-1.5">
-                                    <Label className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">Attendant</Label>
-                                    <FormSelectField
-                                      name="attendantUserId"
-                                      defaultValue={assignment?.attendant_user_id ?? ""}
-                                      placeholder="Assign attendant"
-                                      options={staff.map((member) => ({
-                                        value: member.id,
-                                        label: member.full_name?.trim() || member.email,
-                                      }))}
-                                      emptyStateText="No available attendants."
-                                    />
-                                  </div>
-
-                                  <div className="grid gap-1.5">
-                                    <Label className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">Assignment Status</Label>
-                                    <FormSelectField
-                                      name="status"
-                                      defaultValue={assignment?.status ?? "pending"}
-                                      options={[
-                                        { value: "pending", label: "Pending" },
-                                        { value: "in_progress", label: "In progress" },
-                                        { value: "completed", label: "Completed" },
-                                      ]}
-                                    />
-                                  </div>
-
-                                  <FormSubmitButton idleText="Save Assignment" pendingText="Saving..." size="sm" variant="outline" className="border-zinc-300" />
-                                </form>
-
-                                <form action={updateStatusAction} className="grid gap-2 rounded-lg border border-zinc-200 p-2">
-                                  <input type="hidden" name="roomId" value={room.id} />
-
-                                  <div className="grid gap-1.5">
-                                    <Label className="text-[11px] uppercase tracking-[0.14em] text-zinc-500">Room Status</Label>
-                                    <FormSelectField
-                                      name="status"
-                                      defaultValue={room.status}
-                                      options={[
-                                        { value: "vacant", label: "Vacant" },
-                                        { value: "occupied", label: "Occupied" },
-                                        { value: "dirty", label: "Dirty" },
-                                        { value: "inspection", label: "Inspection" },
-                                        { value: "maintenance", label: "Maintenance" },
-                                        { value: "out_of_order", label: "Out of order" },
-                                      ]}
-                                    />
-                                  </div>
-
-                                  <Input name="note" placeholder="Optional housekeeping note" />
-                                  <FormSubmitButton idleText="Update Room" pendingText="Updating..." size="sm" className="bg-[#ff6900] hover:bg-[#e55f00]" />
-                                </form>
-
-                                <div className="lg:col-span-2">
-                                  <HousekeepingEvidencePanel
-                                    propertyId={activePropertyId}
-                                    roomId={room.id}
-                                    roomNumber={room.room_number}
-                                  />
-                                </div>
-                              </div>
-                            </details>
-                          </li>
-                        );
-                      })}
+                      {floorRooms.map((room) => (
+                        <HousekeepingRoomCard
+                          key={room.id}
+                          room={room}
+                          assignment={assignmentsByRoom[room.id]}
+                          staff={staff}
+                          propertyId={activePropertyId}
+                          isArrivalRoom={arrivalRoomIds.has(room.id)}
+                          isDnd={activeDndRoomIds.has(room.id)}
+                        />
+                      ))}
                     </ul>
                   </section>
                 );

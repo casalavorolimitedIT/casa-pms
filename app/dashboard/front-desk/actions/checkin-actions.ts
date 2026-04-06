@@ -13,6 +13,7 @@ const CheckInSchema = z.object({
   paymentEmail: z.string().email().optional().or(z.literal("")),
   paymentCurrency: z.string().default("USD"),
   setupAmountMinor: z.coerce.number().int().min(0).default(0),
+  postEarlyFee: z.coerce.boolean().default(false),
 });
 
 const CheckOutSchema = z.object({
@@ -22,6 +23,7 @@ const CheckOutSchema = z.object({
   currency: z.string().default("USD"),
   amountMinor: z.coerce.number().int().min(0),
   email: z.string().email().optional().or(z.literal("")),
+  postLateFee: z.coerce.boolean().default(false),
 });
 
 const RoomMoveSchema = z.object({
@@ -86,22 +88,37 @@ export async function getCheckInReservationContext(reservationId: string) {
     .eq("property_id", activePropertyId)
     .single();
 
-  if (!reservation) return { reservation: null, availableRooms: [] };
+  if (!reservation) return { reservation: null, availableRooms: [], propertySettings: null };
 
   const assigned = (reservation.reservation_rooms as Array<{ room_type_id: string }>)[0];
   const roomTypeId = assigned?.room_type_id;
 
-  const { data: rooms } = await supabase
-    .from("rooms")
-    .select("id, room_number, status")
-    .eq("property_id", reservation.property_id)
-    .eq("room_type_id", roomTypeId)
-    .eq("status", "vacant")
-    .order("room_number", { ascending: true });
+  const [roomsRes, settingsRes] = await Promise.all([
+    supabase
+      .from("rooms")
+      .select("id, room_number, status")
+      .eq("property_id", reservation.property_id)
+      .eq("room_type_id", roomTypeId)
+      .eq("status", "vacant")
+      .order("room_number", { ascending: true }),
+    supabase
+      .from("property_settings")
+      .select("check_in_time, early_checkin_fee_minor")
+      .eq("property_id", activePropertyId)
+      .maybeSingle(),
+  ]);
+
+  const settingsRow = settingsRes.data;
 
   return {
     reservation,
-    availableRooms: rooms ?? [],
+    availableRooms: roomsRes.data ?? [],
+    propertySettings: settingsRow
+      ? {
+          checkInTime: (settingsRow.check_in_time as string).slice(0, 5),
+          earlyCheckinFeeMinor: (settingsRow.early_checkin_fee_minor as number) ?? 0,
+        }
+      : { checkInTime: "15:00", earlyCheckinFeeMinor: 0 },
   };
 }
 
@@ -115,12 +132,13 @@ export async function confirmCheckIn(formData: FormData) {
     paymentEmail: formData.get("paymentEmail"),
     paymentCurrency: formData.get("paymentCurrency"),
     setupAmountMinor: formData.get("setupAmountMinor"),
+    postEarlyFee: formData.get("postEarlyFee") === "on",
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   if (!parsed.data.idVerified) return { error: "ID verification is required to check in." };
 
-  const { reservationId, roomId, setupAmountMinor, paymentCurrency, paymentEmail } = parsed.data;
+  const { reservationId, roomId, setupAmountMinor, paymentCurrency, paymentEmail, postEarlyFee } = parsed.data;
 
   const { data: reservation } = await supabase
     .from("reservations")
@@ -149,6 +167,42 @@ export async function confirmCheckIn(formData: FormData) {
     .update({ status: "checked_in", updated_at: new Date().toISOString() })
     .eq("id", reservationId);
 
+  // Ensure folio exists for this reservation
+  let folioId: string | undefined;
+  const { data: existingFolio } = await supabase
+    .from("folios")
+    .select("id")
+    .eq("reservation_id", reservationId)
+    .maybeSingle();
+  if (existingFolio) {
+    folioId = existingFolio.id;
+  } else {
+    const { data: newFolio } = await supabase
+      .from("folios")
+      .insert({ reservation_id: reservationId, status: "open", currency_code: paymentCurrency || "USD" })
+      .select("id")
+      .single();
+    folioId = newFolio?.id;
+  }
+
+  // Post early check-in fee if opted in
+  if (postEarlyFee && folioId) {
+    const settingsRes = await supabase
+      .from("property_settings")
+      .select("early_checkin_fee_minor")
+      .eq("property_id", activePropertyId)
+      .maybeSingle();
+    const feeMinor = (settingsRes.data?.early_checkin_fee_minor as number) ?? 0;
+    if (feeMinor > 0) {
+      await supabase.from("folio_charges").insert({
+        folio_id: folioId,
+        amount_minor: feeMinor,
+        category: "early_checkin",
+        description: "Early check-in fee",
+      });
+    }
+  }
+
   let paymentSetupUrl: string | undefined;
   if (setupAmountMinor > 0 && paymentEmail) {
     const setup = await initializePayment({
@@ -163,7 +217,7 @@ export async function confirmCheckIn(formData: FormData) {
 
   revalidatePath("/dashboard/front-desk");
   revalidatePath(`/dashboard/front-desk/check-in/${reservationId}`);
-  return { success: true, paymentSetupUrl };
+  return { success: true, paymentSetupUrl, folioId };
 }
 
 export async function getCheckOutReservationContext(reservationId: string) {
@@ -200,7 +254,7 @@ export async function getCheckOutReservationContext(reservationId: string) {
     folio = created;
   }
 
-  const [chargesRes, paymentsRes] = await Promise.all([
+  const [chargesRes, paymentsRes, settingsPayload] = await Promise.all([
     supabase
       .from("folio_charges")
       .select("id, amount_minor, category, description, created_at")
@@ -211,6 +265,7 @@ export async function getCheckOutReservationContext(reservationId: string) {
       .select("id, amount_minor, method, provider, provider_reference, created_at")
       .eq("folio_id", folio?.id ?? "")
       .order("created_at", { ascending: true }),
+    getPropertySettingsForCheckout(reservation.property_id),
   ]);
 
   return {
@@ -218,6 +273,20 @@ export async function getCheckOutReservationContext(reservationId: string) {
     folio,
     charges: chargesRes.data ?? [],
     payments: paymentsRes.data ?? [],
+    propertySettings: settingsPayload,
+  };
+}
+
+async function getPropertySettingsForCheckout(propertyId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("property_settings")
+    .select("check_out_time, late_checkout_fee_minor")
+    .eq("property_id", propertyId)
+    .maybeSingle();
+  return {
+    checkOutTime: data ? (data.check_out_time as string).slice(0, 5) : "11:00",
+    lateCheckoutFeeMinor: (data?.late_checkout_fee_minor as number) ?? 0,
   };
 }
 
@@ -231,10 +300,11 @@ export async function confirmCheckOut(formData: FormData) {
     amountMinor: formData.get("amountMinor"),
     currency: formData.get("currency"),
     email: formData.get("email"),
+    postLateFee: formData.get("postLateFee") === "on",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
-  const { reservationId, folioId, paymentMethod, amountMinor, currency, email } = parsed.data;
+  const { reservationId, folioId, paymentMethod, amountMinor, currency, email, postLateFee } = parsed.data;
 
   const { data: reservation } = await supabase
     .from("reservations")
@@ -287,7 +357,26 @@ export async function confirmCheckOut(formData: FormData) {
     .maybeSingle();
 
   if (rr?.room_id) {
-    await supabase.from("rooms").update({ status: "vacant" }).eq("id", rr.room_id);
+    // Set to dirty so housekeeping picks it up immediately
+    await supabase.from("rooms").update({ status: "dirty" }).eq("id", rr.room_id);
+  }
+
+  // Post late check-out fee if opted in
+  if (postLateFee) {
+    const lateFeeRes = await supabase
+      .from("property_settings")
+      .select("late_checkout_fee_minor")
+      .eq("property_id", activePropertyId)
+      .maybeSingle();
+    const feeMinor = (lateFeeRes.data?.late_checkout_fee_minor as number) ?? 0;
+    if (feeMinor > 0) {
+      await supabase.from("folio_charges").insert({
+        folio_id: folioId,
+        amount_minor: feeMinor,
+        category: "late_checkout",
+        description: "Late check-out fee",
+      });
+    }
   }
 
   await supabase.from("check_in_records").update({ checked_out_at: new Date().toISOString() }).eq("reservation_id", reservationId);

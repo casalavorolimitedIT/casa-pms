@@ -28,6 +28,8 @@ const UpdatePropertyBaseSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}$/, "Must be HH:MM format")
     .default("11:00"),
+  earlyCheckinFeeMinor: z.coerce.number().int().min(0).default(0),
+  lateCheckoutFeeMinor: z.coerce.number().int().min(0).default(0),
 });
 
 const TogglePermissionSchema = z.object({
@@ -53,6 +55,8 @@ export interface PropertyWithSettings {
   timezone: string;
   checkInTime: string;
   checkOutTime: string;
+  earlyCheckinFeeMinor: number;
+  lateCheckoutFeeMinor: number;
 }
 
 export interface PermissionEntry {
@@ -108,16 +112,18 @@ export async function getPropertiesWithSettings(): Promise<{
 
   const { data: settingsRows, error: settingsError } = await supabase
     .from("property_settings")
-    .select("property_id, check_in_time, check_out_time")
+    .select("property_id, check_in_time, check_out_time, early_checkin_fee_minor, late_checkout_fee_minor")
     .in("property_id", propertyIds);
 
   if (settingsError) return { error: settingsError.message };
 
-  const settingsMap = new Map<string, { checkInTime: string; checkOutTime: string }>();
+  const settingsMap = new Map<string, { checkInTime: string; checkOutTime: string; earlyCheckinFeeMinor: number; lateCheckoutFeeMinor: number }>();
   for (const row of settingsRows ?? []) {
     settingsMap.set(row.property_id, {
       checkInTime: (row.check_in_time as string).slice(0, 5),
       checkOutTime: (row.check_out_time as string).slice(0, 5),
+      earlyCheckinFeeMinor: (row.early_checkin_fee_minor as number) ?? 0,
+      lateCheckoutFeeMinor: (row.late_checkout_fee_minor as number) ?? 0,
     });
   }
 
@@ -129,6 +135,8 @@ export async function getPropertiesWithSettings(): Promise<{
       timezone: p.timezone,
       checkInTime: settingsMap.get(p.id)?.checkInTime ?? "15:00",
       checkOutTime: settingsMap.get(p.id)?.checkOutTime ?? "11:00",
+      earlyCheckinFeeMinor: settingsMap.get(p.id)?.earlyCheckinFeeMinor ?? 0,
+      lateCheckoutFeeMinor: settingsMap.get(p.id)?.lateCheckoutFeeMinor ?? 0,
     })),
   };
 }
@@ -201,6 +209,8 @@ export async function updatePropertySettings(formData: FormData) {
     timezone: formData.get("timezone"),
     checkInTime: formData.get("checkInTime"),
     checkOutTime: formData.get("checkOutTime"),
+    earlyCheckinFeeMinor: formData.get("earlyCheckinFeeMinor"),
+    lateCheckoutFeeMinor: formData.get("lateCheckoutFeeMinor"),
   });
 
   if (!parsed.success) {
@@ -230,6 +240,8 @@ export async function updatePropertySettings(formData: FormData) {
       property_id: parsed.data.propertyId,
       check_in_time: parsed.data.checkInTime,
       check_out_time: parsed.data.checkOutTime,
+      early_checkin_fee_minor: parsed.data.earlyCheckinFeeMinor,
+      late_checkout_fee_minor: parsed.data.lateCheckoutFeeMinor,
     },
     { onConflict: "property_id" }
   );

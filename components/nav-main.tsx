@@ -22,12 +22,16 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 const NAV_DESCRIPTIONS: Record<string, string> = {
   Overview: "Track occupancy, arrivals, and daily property performance at a glance.",
-  "Core PMS": "Manage rooms, guests, and reservations with complete operational context.",
+  "Rooms & Stays": "Manage rooms, guests, reservations, and central booking operations.",
+  "Guest Services": "Handle concierge, messaging, requests, and the full guest experience.",
+  Housekeeping: "Assign and monitor cleaning, inspection, lost & found, and linen tasks.",
+  Engineering: "Log work orders, preventive maintenance, and manage property assets.",
+  "F&B": "Operate menus, QR ordering, kitchen queue, inventory, and minibar.",
+  Spa: "Schedule treatments, manage therapists, and run membership entitlements.",
   Commercial: "Control rates, packages, and seasonal pricing strategy.",
-  "Operations Desk": "Run arrivals, departures, front desk controls, and cashier close tasks.",
-  "Operations Service": "Coordinate housekeeping, engineering, assets, and back-of-house execution.",
-  "Operations F&B": "Operate minibar, kitchen flow, QR ordering, menus, and stock control.",
-  "Operations Guest": "Handle concierge, messaging, guest requests, and stay-experience workflows.",
+  Reports: "Decision-grade reporting across revenue, KPIs, AR, and operations.",
+  "Finance & Audit": "Manage folios, run the night audit, and handle cashier close.",
+  Settings: "Configure property, roles, staff, billing, and notification preferences.",
 }
 
 const SUBMENU_DESCRIPTIONS: Record<string, string> = {
@@ -47,6 +51,13 @@ const SUBMENU_DESCRIPTIONS: Record<string, string> = {
   Loyalty: "Track points earning, redemption, and tier progression.",
   "Chain Rates": "Create shared chain plans and push pricing to selected properties.",
   "Chain Reports": "Compare occupancy and revenue side-by-side across properties.",
+  "Overview": "Summary KPIs and links to all report modules.",
+  "Revenue": "Daily revenue by source and department with period comparison.",
+  "KPIs": "Occupancy, ADR, and RevPAR trends over your selected date range.",
+  "AR Aging": "Outstanding folio balances bucketed by age — 0–30, 31–60, 61–90, 90+ days.",
+  "Housekeeping Report": "Attendant productivity, rooms cleaned, and pending workload.",
+  "Pace Report": "Booking pickup and forecast occupancy vs. prior year.",
+  "Segmentation": "Revenue share by direct, OTA, corporate, walk-in, group, and agent.",
   Agents: "Manage travel-agent profiles, commissions, and payout tracking.",
   "Arrivals & Departures": "Track today’s guest movement and priorities.",
   "Room Board": "Visual room status board for operations coordination.",
