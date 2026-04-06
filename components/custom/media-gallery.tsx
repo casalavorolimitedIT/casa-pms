@@ -31,6 +31,7 @@ interface MediaGalleryProps {
   featureType:
     | "guest_id"
     | "guest_profile"
+    | "room_gallery"
     | "room_condition"
     | "lost_found"
     | "cleaning_task"

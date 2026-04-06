@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 import Link from "next/link";
 import { getActivePropertyId } from "@/lib/pms/property-context";
+import { RoomTypeThumbnail } from "@/components/custom/room-type-thumbnail";
 
 export default async function RoomTypesPage() {
   await redirectIfNotAuthenticated();
@@ -47,7 +48,12 @@ export default async function RoomTypesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {roomTypes.map((rt) => (
-            <Card key={rt.id} className="glass-panel">
+            <Card key={rt.id} className="glass-panel overflow-hidden">
+              <RoomTypeThumbnail
+                propertyId={activePropertyId}
+                roomTypeId={rt.id}
+                roomTypeName={rt.name}
+              />
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{rt.name}</CardTitle>
               </CardHeader>

@@ -173,4 +173,16 @@
   .glass-panel {
     @apply border-zinc-200/80 bg-white/80 backdrop-blur-sm;
   }
+
+  /* Segment palette for market-segmentation report */
+  .segment-color-0 { background-color: #ff6900; }
+  .segment-color-1 { background-color: #ff9f5a; }
+  .segment-color-2 { background-color: #3b82f6; }
+  .segment-color-3 { background-color: #10b981; }
+  .segment-color-4 { background-color: #a78bfa; }
+  .segment-color-5 { background-color: #f59e0b; }
+  .segment-color-6 { background-color: #ec4899; }
+  .segment-color-7 { background-color: #14b8a6; }
+  .segment-color-8 { background-color: #8b5cf6; }
+  .segment-color-9 { background-color: #f97316; }
 }

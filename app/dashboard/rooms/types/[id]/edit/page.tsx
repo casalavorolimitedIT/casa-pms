@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
+import { RoomTypeGallery } from "@/components/custom/room-type-gallery";
 
 type EditRoomTypePageProps = {
   params: Promise<{ id: string }>;
@@ -139,6 +140,18 @@ export default async function EditRoomTypePage({ params, searchParams }: EditRoo
                 className="bg-[#ff6900] text-white hover:bg-[#e55f00]"
               />
             </form>
+          </CardContent>
+        </Card>
+        <Card className="border-zinc-200">
+          <CardHeader>
+            <CardTitle className="text-base">Room Gallery</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RoomTypeGallery
+              propertyId={activePropertyId}
+              roomTypeId={id}
+              roomTypeName={roomType.name}
+            />
           </CardContent>
         </Card>
       </div>

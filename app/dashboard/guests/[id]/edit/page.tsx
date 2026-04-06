@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getGuest, updateGuest } from "@/app/dashboard/guests/actions/guest-actions";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { FormDateTimeField } from "@/components/ui/form-date-time-field";
+import { GuestProfilePhotoSection } from "@/components/custom/guest-profile-photo-section";
 
 interface EditGuestPageProps {
   params: Promise<{ id: string }>;
@@ -19,8 +21,11 @@ interface EditGuestPageProps {
 export default async function EditGuestPage({ params, searchParams }: EditGuestPageProps) {
   await redirectIfNotAuthenticated();
 
-  const { id } = await params;
-  const { error } = await searchParams;
+  const [{ id }, { error }, propertyId] = await Promise.all([
+    params,
+    searchParams,
+    getActivePropertyId(),
+  ]);
 
   const result = await getGuest(id);
 
@@ -121,6 +126,14 @@ export default async function EditGuestPage({ params, searchParams }: EditGuestP
             </form>
           </CardContent>
         </Card>
+
+        {propertyId ? (
+          <GuestProfilePhotoSection
+            propertyId={propertyId}
+            guestId={id}
+            guestName={`${guest.first_name} ${guest.last_name}`}
+          />
+        ) : null}
       </div>
     </div>
   );

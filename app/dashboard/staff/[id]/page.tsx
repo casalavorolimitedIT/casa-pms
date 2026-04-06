@@ -10,6 +10,7 @@ import {
   removeStaffRole,
   updateStaffProfile,
 } from "@/app/dashboard/staff/actions/staff-actions";
+import { getActivePropertyId } from "@/lib/pms/property-context";
 import { ALL_STAFF_ROLES, ROLE_COLORS, STAFF_ROLE_LABELS } from "@/lib/staff/roles";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
+import { StaffProfilePhoto } from "@/components/custom/staff-profile-photo";
 
 interface StaffDetailPageProps {
   params: Promise<{ id: string }>;
@@ -31,13 +33,15 @@ export default async function StaffDetailPage({ params, searchParams }: StaffDet
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ id }, query, { staff, error }, propertyResult, canManageAccess] = await Promise.all([
-    params,
-    searchParams,
-    getOrgStaff(),
-    getOrgProperties(),
-    currentUserCanManageStaffAccess(),
-  ]);
+  const [{ id }, query, { staff, error }, propertyResult, canManageAccess, activePropertyId] =
+    await Promise.all([
+      params,
+      searchParams,
+      getOrgStaff(),
+      getOrgProperties(),
+      currentUserCanManageStaffAccess(),
+      getActivePropertyId(),
+    ]);
 
   const member = (staff ?? []).find((entry) => entry.userId === id);
 
@@ -111,9 +115,18 @@ export default async function StaffDetailPage({ params, searchParams }: StaffDet
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-lg font-semibold text-zinc-700">
-              {initials}
-            </div>
+            {activePropertyId ? (
+              <StaffProfilePhoto
+                propertyId={activePropertyId}
+                userId={member.userId}
+                fullName={member.fullName ?? member.email}
+                canEdit={canEditProfile}
+              />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-lg font-semibold text-zinc-700">
+                {initials}
+              </div>
+            )}
             <div>
               <h1 className="page-title">{member.fullName ?? member.email}</h1>
               <p className="page-subtitle">

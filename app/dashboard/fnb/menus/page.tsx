@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Badge } from "@/components/ui/badge";
+import { FnbMenuItemMedia } from "@/components/custom/fnb-menu-item-media";
 import {
   createMenuCategory,
   createMenuItem,
@@ -301,6 +302,11 @@ export default async function FnbMenusPage({ searchParams }: MenusPageProps) {
                       <p className="mt-1 text-xs text-zinc-500">
                         {mods.length} modifier(s) · {overrides.length} outlet override(s)
                       </p>
+                      <FnbMenuItemMedia
+                        propertyId={propertyId}
+                        menuItemId={item.id}
+                        menuItemName={item.name}
+                      />
                     </div>
                   );
                 })}

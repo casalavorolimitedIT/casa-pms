@@ -176,8 +176,7 @@ export function SegmentationChart({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span
-                      className="inline-block h-2.5 w-2.5 rounded-full [background-color:var(--dot-color)]"
-                      style={{ "--dot-color": SEGMENT_COLORS[i % SEGMENT_COLORS.length] } as React.CSSProperties}
+                      className={`inline-block h-2.5 w-2.5 rounded-full segment-color-${i % 10}`}
                     />
                     <span className="font-medium capitalize text-zinc-900">{row.source}</span>
                   </div>

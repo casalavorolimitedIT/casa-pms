@@ -87,12 +87,12 @@ export function HousekeepingProductivityTable({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                    <div className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-100">
-                        <div
-                          className="h-full rounded-full bg-emerald-500 transition-all [width:var(--pct)]"
-                          style={{ "--pct": `${completionPct}%` } as React.CSSProperties}
-                        />
-                      </div>
+                      <progress
+                        value={completionPct}
+                        max={100}
+                        aria-label={`${completionPct}% complete`}
+                        className="h-1.5 w-20 overflow-hidden rounded-full accent-emerald-500"
+                      />
                       <span className="w-10 text-right tabular-nums text-sm text-zinc-700">
                         {completionPct}%
                       </span>

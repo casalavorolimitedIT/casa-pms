@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import { PropertyBrandingSection } from "@/components/custom/property-branding-section";
 
 // Common timezone list for hotel operations
 const TIMEZONES = [
@@ -257,6 +258,14 @@ export default async function PropertySettingsPage({ searchParams }: Props) {
                 )}
               </CardContent>
             </Card>
+          ))}
+
+          {properties.map((property) => (
+            <PropertyBrandingSection
+              key={property.id}
+              propertyId={property.id}
+              propertyName={property.name}
+            />
           ))}
         </div>
       )}
