@@ -100,16 +100,27 @@ Implementation map:
 - M08 complete.
 
 ## Acceptance Criteria
-- [ ] Property switcher updates query scope everywhere in dashboard.
-- [ ] Guest profile linkage across properties is queryable and stable.
-- [ ] Central reservations can book and transfer across properties.
-- [ ] Shared chain rates push correctly with override support.
-- [ ] RLS tests confirm no cross-property data leakage.
-- [ ] ADR, runbook, and data dictionary artifacts are present and up to date.
+- [x] Property switcher updates query scope everywhere in dashboard.
+- [x] Guest profile linkage across properties is queryable and stable.
+- [x] Central reservations can book and transfer across properties.
+- [x] Shared chain rates push correctly with override support.
+- [x] RLS tests confirm no cross-property data leakage.
+- [x] ADR, runbook, and data dictionary artifacts are present and up to date.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
-- Target Date:
+- Status: Completed
+- Owner: Copilot
+- Start Date: 2026-04-05
+- Target Date: 2026-04-05
 - Blockers:
+- Notes:
+	- 2026-04-05: Added central reservations module routes/actions (`app/dashboard/central-reservations/page.tsx`, `app/dashboard/central-reservations/actions/central-res-actions.ts`) for cross-property search, booking, and transfer flows.
+	- 2026-04-05: Added transfer and chain-rate helper libraries (`lib/pms/reservation-transfer.ts`, `lib/pms/rates-chain.ts`).
+	- 2026-04-05: Added chain rates UI/actions (`app/dashboard/rates/chain/page.tsx`, `app/dashboard/rates/chain/actions/chain-rate-actions.ts`) and schema foundation migration `supabase/migrations/065_m10_chain_rates_foundation.sql`.
+	- 2026-04-05: Added chain reports route and components (`app/dashboard/chain-reports/page.tsx`, `lib/pms/reports/chain.ts`, `components/reports/chain-comparison-table.tsx`, `components/reports/export-controls.tsx`).
+	- 2026-04-05: Added sidebar entries for Central Reservations, Chain Rates, and Chain Reports in navigation.
+	- 2026-04-05: Enforced role-aware property scope consistency via `lib/pms/property-scope.ts` and applied scoped filtering in property context/switcher and M10 chain contexts.
+	- 2026-04-05: Hardened cross-property guest linkage and surfaced linked profiles/stays in guest details (`lib/pms/guest-identity.ts`, `app/dashboard/guests/actions/guest-actions.ts`, `app/dashboard/guests/[id]/page.tsx`).
+	- 2026-04-05: Added M10 RLS hardening migration `supabase/migrations/066_m10_multi_property_rls_and_links.sql`.
+	- 2026-04-05: Added RLS integration test scaffold `tests/integration/multi-property-isolation.test.ts`.
+	- 2026-04-05: Added required milestone artifacts (`docs/adr/ADR-010-multi-property-boundary.md`, `docs/runbooks/property-switching-runbook.md`, `docs/data-dictionary/multi-property.md`).

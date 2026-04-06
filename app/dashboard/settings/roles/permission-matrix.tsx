@@ -44,6 +44,7 @@ export const PERMISSION_CATALOGUE: Record<string, string[]> = {
   Concierge: ["concierge.view", "concierge.manage"],
   Messaging: ["messaging.view", "messaging.send"],
   "Work Orders": ["work_orders.view", "work_orders.create", "work_orders.manage"],
+  Spa: ["spa.manage"],
   Tasks: ["tasks.view", "tasks.manage"],
   Minibar: ["minibar.manage"],
   Linen: ["linen.manage"],

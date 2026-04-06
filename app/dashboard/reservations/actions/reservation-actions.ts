@@ -68,6 +68,16 @@ const DeleteReservationSchema = z.object({
   reservationId: z.string().uuid(),
 });
 
+const MoveReservationCalendarSchema = z.object({
+  reservationId: z.string().uuid(),
+  newCheckIn: reservationDateSchema("Invalid check-in date"),
+  newCheckOut: reservationDateSchema("Invalid check-out date").optional(),
+  newRoomId: z.string().uuid().nullable().optional(),
+}).refine((d) => !d.newCheckOut || d.newCheckOut > d.newCheckIn, {
+  message: "Check-out must be after check-in",
+  path: ["newCheckOut"],
+});
+
 async function ensureReservationInActiveProperty(reservationId: string) {
   const supabase = await createClient();
   const activePropertyId = await requireActivePropertyId();
@@ -436,6 +446,226 @@ export async function updateReservationDetails(formData: FormData) {
   return { success: true };
 }
 
+export async function moveReservationOnCalendar(input: {
+  reservationId: string;
+  newCheckIn: string;
+  newCheckOut?: string;
+  newRoomId?: string | null;
+}) {
+  const parsed = MoveReservationCalendarSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message };
+  }
+
+  const activePropertyId = await ensureReservationInActiveProperty(parsed.data.reservationId);
+  await requirePermission("reservations.update", activePropertyId);
+
+  const supabase = await createClient();
+
+  const { data: reservation, error: reservationError } = await supabase
+    .from("reservations")
+    .select("id, check_in, check_out")
+    .eq("id", parsed.data.reservationId)
+    .eq("property_id", activePropertyId)
+    .single();
+
+  if (reservationError || !reservation) {
+    return { error: reservationError?.message ?? "Reservation not found." };
+  }
+
+  const { data: reservationRoom, error: roomError } = await supabase
+    .from("reservation_rooms")
+    .select("id, room_id, room_type_id")
+    .eq("reservation_id", parsed.data.reservationId)
+    .maybeSingle();
+
+  if (roomError) {
+    return { error: roomError.message };
+  }
+
+  if (!reservationRoom?.room_type_id) {
+    return { error: "Reservation is missing room type assignment." };
+  }
+
+  const oldCheckIn = new Date(`${reservation.check_in}T00:00:00Z`);
+  const oldCheckOut = new Date(`${reservation.check_out}T00:00:00Z`);
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const stayNights = Math.max(1, Math.round((oldCheckOut.getTime() - oldCheckIn.getTime()) / msPerDay));
+
+  let nextCheckOutIso = parsed.data.newCheckOut;
+  if (!nextCheckOutIso) {
+    const nextCheckIn = new Date(`${parsed.data.newCheckIn}T00:00:00Z`);
+    const nextCheckOut = new Date(nextCheckIn);
+    nextCheckOut.setUTCDate(nextCheckOut.getUTCDate() + stayNights);
+    nextCheckOutIso = nextCheckOut.toISOString().slice(0, 10);
+  }
+
+  let nextRoomId = reservationRoom.room_id;
+  let nextRoomTypeId = reservationRoom.room_type_id;
+
+  if (parsed.data.newRoomId !== undefined) {
+    if (parsed.data.newRoomId === null) {
+      nextRoomId = null;
+    } else {
+      const { data: targetRoom, error: targetRoomError } = await supabase
+        .from("rooms")
+        .select("id, room_type_id")
+        .eq("id", parsed.data.newRoomId)
+        .eq("property_id", activePropertyId)
+        .maybeSingle();
+
+      if (targetRoomError) {
+        return { error: targetRoomError.message };
+      }
+
+      if (!targetRoom?.room_type_id) {
+        return { error: "Target room is invalid for this property." };
+      }
+
+      nextRoomId = targetRoom.id;
+      nextRoomTypeId = targetRoom.room_type_id;
+    }
+  }
+
+  const overlapError = await checkOverlap({
+    propertyId: activePropertyId,
+    roomId: nextRoomId,
+    roomTypeId: nextRoomTypeId,
+    checkIn: parsed.data.newCheckIn,
+    checkOut: nextCheckOutIso,
+    excludeReservationId: parsed.data.reservationId,
+  });
+  if (overlapError) {
+    return { error: overlapError };
+  }
+
+  const { error: updateError } = await supabase
+    .from("reservations")
+    .update({
+      check_in: parsed.data.newCheckIn,
+      check_out: nextCheckOutIso,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.reservationId)
+    .eq("property_id", activePropertyId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const { error: assignmentError } = await supabase
+    .from("reservation_rooms")
+    .update({
+      room_id: nextRoomId,
+      room_type_id: nextRoomTypeId,
+    })
+    .eq("id", reservationRoom.id);
+
+  if (assignmentError) {
+    return { error: assignmentError.message };
+  }
+
+  revalidatePath("/dashboard/reservations");
+  revalidatePath("/dashboard/reservations/calendar");
+  revalidatePath("/dashboard/room-board");
+  revalidatePath(`/dashboard/reservations/${parsed.data.reservationId}`);
+  return { success: true };
+}
+
+export async function assignBestFitRoomOnCalendar(input: { reservationId: string }) {
+  const reservationId = input.reservationId;
+  if (!reservationId) {
+    return { error: "Reservation is required." };
+  }
+
+  const activePropertyId = await ensureReservationInActiveProperty(reservationId);
+  await requirePermission("reservations.update", activePropertyId);
+
+  const supabase = await createClient();
+
+  const { data: reservation, error: reservationError } = await supabase
+    .from("reservations")
+    .select("id, check_in, check_out")
+    .eq("id", reservationId)
+    .eq("property_id", activePropertyId)
+    .single();
+
+  if (reservationError || !reservation) {
+    return { error: reservationError?.message ?? "Reservation not found." };
+  }
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("reservation_rooms")
+    .select("id, room_id, room_type_id")
+    .eq("reservation_id", reservationId)
+    .maybeSingle();
+
+  if (assignmentError) {
+    return { error: assignmentError.message };
+  }
+
+  if (!assignment?.room_type_id) {
+    return { error: "Reservation is missing room type assignment." };
+  }
+
+  const { data: overlappingAssignments, error: overlapQueryError } = await supabase
+    .from("reservation_rooms")
+    .select("room_id, reservations!inner(id, check_in, check_out, status, property_id)")
+    .eq("reservations.property_id", activePropertyId)
+    .not("reservations.status", "in", '("cancelled","no_show")')
+    .lt("reservations.check_in", reservation.check_out)
+    .gt("reservations.check_out", reservation.check_in)
+    .neq("reservations.id", reservationId);
+
+  if (overlapQueryError) {
+    return { error: overlapQueryError.message };
+  }
+
+  const busyRoomIds = new Set(
+    (overlappingAssignments ?? [])
+      .map((row) => row.room_id)
+      .filter((value): value is string => Boolean(value)),
+  );
+
+  const { data: rooms, error: roomsError } = await supabase
+    .from("rooms")
+    .select("id, room_number, status")
+    .eq("property_id", activePropertyId)
+    .eq("room_type_id", assignment.room_type_id)
+    .order("status", { ascending: true })
+    .order("room_number", { ascending: true });
+
+  if (roomsError) {
+    return { error: roomsError.message };
+  }
+
+  const targetRoom = (rooms ?? []).find((room) => !busyRoomIds.has(room.id));
+  if (!targetRoom) {
+    return { error: "No available room found for this stay and room type." };
+  }
+
+  const { error: updateError } = await supabase
+    .from("reservation_rooms")
+    .update({ room_id: targetRoom.id })
+    .eq("id", assignment.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/dashboard/reservations");
+  revalidatePath("/dashboard/reservations/calendar");
+  revalidatePath("/dashboard/room-board");
+  revalidatePath(`/dashboard/reservations/${reservationId}`);
+
+  return {
+    success: true,
+    roomId: targetRoom.id,
+    roomNumber: targetRoom.room_number,
+  };
+}
+
 export async function deleteReservation(formData: FormData) {
   const parsed = DeleteReservationSchema.safeParse({
     reservationId: formData.get("reservationId"),
@@ -711,6 +941,26 @@ export async function getReservations(
   const { data, error } = await query.limit(200);
   if (error) return { error: error.message, reservations: [] };
   return { reservations: data ?? [] };
+}
+
+export async function getReservationCalendarRooms(propertyId: string) {
+  await assertActivePropertyAccess(propertyId);
+  await requirePermission("reservations.view", propertyId);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("rooms")
+    .select(
+      `
+      id, room_number, status, room_type_id,
+      room_types (id, name)
+    `,
+    )
+    .eq("property_id", propertyId)
+    .order("room_number", { ascending: true });
+
+  if (error) return { rooms: [], error: error.message };
+  return { rooms: data ?? [] };
 }
 
 export async function getReservation(id: string) {

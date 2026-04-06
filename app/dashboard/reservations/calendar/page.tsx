@@ -1,34 +1,22 @@
 import Link from "next/link";
 import {
-  addDays,
+
   addMonths,
-  endOfMonth,
-  endOfWeek,
   format,
-  isSameMonth,
-  isToday,
   parse,
   startOfMonth,
-  startOfWeek,
   subMonths,
 } from "date-fns";
-import { getReservations } from "@/app/dashboard/reservations/actions/reservation-actions";
-import { Badge } from "@/components/ui/badge";
+import {
+  getReservationFormOptions,
+  getReservationCalendarRooms,
+  getReservations,
+} from "@/app/dashboard/reservations/actions/reservation-actions";
+import { getRoomBlocks } from "@/app/dashboard/reservations/actions/room-block-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-
-const STATUS_TONE: Record<string, string> = {
-  tentative: "bg-slate-100 text-slate-700",
-  confirmed: "bg-blue-100 text-blue-700",
-  checked_in: "bg-emerald-100 text-emerald-700",
-  checked_out: "bg-muted text-muted-foreground",
-  cancelled: "bg-red-100 text-red-700",
-  no_show: "bg-amber-100 text-amber-700",
-};
-
-const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import { ReservationCalendarDnd } from "./reservation-calendar-dnd";
 
 interface ReservationCalendarPageProps {
   searchParams: Promise<{ month?: string; status?: string }>;
@@ -39,20 +27,6 @@ function getGuestName(guestRaw: unknown) {
     ? (guestRaw[0] as { first_name?: string; last_name?: string } | undefined)
     : (guestRaw as { first_name?: string; last_name?: string } | null);
   return `${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim() || "Unknown guest";
-}
-
-function stayOverlapsDate(checkIn: string, checkOut: string, day: Date) {
-  const inDate = new Date(checkIn);
-  const outDate = new Date(checkOut);
-
-  const dayStart = new Date(day);
-  dayStart.setHours(0, 0, 0, 0);
-
-  const dayEnd = new Date(day);
-  dayEnd.setHours(23, 59, 59, 999);
-
-  // A reservation is active on dates >= check-in and < check-out
-  return inDate <= dayEnd && outDate > dayStart;
 }
 
 export default async function ReservationCalendarPage({ searchParams }: ReservationCalendarPageProps) {
@@ -72,21 +46,73 @@ export default async function ReservationCalendarPage({ searchParams }: Reservat
   const focusedMonth = month
     ? parse(month, "yyyy-MM", new Date())
     : startOfMonth(new Date());
-  const monthStart = startOfMonth(focusedMonth);
-  const monthEnd = endOfMonth(focusedMonth);
 
-  const gridStart = startOfWeek(monthStart);
-  const gridEnd = endOfWeek(monthEnd);
+  const rangeStart = format(focusedMonth, "yyyy-MM-01");
+  const rangeEnd = format(addMonths(focusedMonth, 1), "yyyy-MM-01");
 
-  const { reservations } = await getReservations(
-    activePropertyId,
-    status ? { status } : undefined,
-  );
+  const [{ reservations }, { rooms }, formOptions, calendarBlocks] = await Promise.all([
+    getReservations(activePropertyId, status ? { status } : undefined),
+    getReservationCalendarRooms(activePropertyId),
+    getReservationFormOptions(activePropertyId),
+    getRoomBlocks(activePropertyId, rangeStart, rangeEnd),
+  ]);
 
-  const days: Date[] = [];
-  for (let day = gridStart; day <= gridEnd; day = addDays(day, 1)) {
-    days.push(day);
-  }
+  const calendarRooms = rooms.map((room) => {
+    const roomTypeRaw = room.room_types as { name?: string } | Array<{ name?: string }> | null;
+    const roomType = Array.isArray(roomTypeRaw) ? roomTypeRaw[0] : roomTypeRaw;
+    return {
+      id: room.id,
+      roomNumber: room.room_number,
+      status: room.status,
+      roomTypeId: room.room_type_id,
+      roomTypeName: roomType?.name ?? "Room",
+    };
+  });
+
+  const guestOptions = formOptions.guests.map((guest) => ({
+    value: guest.id,
+    label: `${guest.first_name} ${guest.last_name}${guest.email ? ` · ${guest.email}` : ""}`,
+  }));
+
+  const roomTypeOptions = formOptions.roomTypes.map((roomType) => ({
+    value: roomType.id,
+    label: `${roomType.name} · max ${roomType.max_occupancy}`,
+  }));
+
+  const roomOptions = formOptions.rooms.map((room) => ({
+    value: room.id,
+    label: `${room.room_number} · ${room.status}`,
+    status: room.status,
+  }));
+
+  const ratePlanOptions = formOptions.ratePlans.map((plan) => ({
+    value: plan.id,
+    label: plan.name,
+  }));
+
+  const calendarReservations = reservations.map((reservation) => {
+    const assignmentRaw = reservation.reservation_rooms as
+      | { room_id?: string | null; room_type_id?: string | null; rooms?: { room_number?: string } | Array<{ room_number?: string }> | null; room_types?: { name?: string } | Array<{ name?: string }> | null }
+      | Array<{ room_id?: string | null; room_type_id?: string | null; rooms?: { room_number?: string } | Array<{ room_number?: string }> | null; room_types?: { name?: string } | Array<{ name?: string }> | null }>
+      | null;
+    const assignment = Array.isArray(assignmentRaw) ? assignmentRaw[0] : assignmentRaw;
+    const roomRaw = assignment?.rooms;
+    const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
+    const roomTypeRaw = assignment?.room_types;
+    const roomType = Array.isArray(roomTypeRaw) ? roomTypeRaw[0] : roomTypeRaw;
+
+    return {
+    id: reservation.id,
+    status: reservation.status,
+    check_in: reservation.check_in,
+    check_out: reservation.check_out,
+    guestName: getGuestName(reservation.guests),
+    roomId: assignment?.room_id ?? null,
+    roomTypeId: assignment?.room_type_id ?? null,
+    roomNumber: room?.room_number ?? null,
+    roomTypeName: roomType?.name ?? null,
+  };
+  });
 
   const prevMonth = format(subMonths(focusedMonth, 1), "yyyy-MM");
   const nextMonth = format(addMonths(focusedMonth, 1), "yyyy-MM");
@@ -103,7 +129,7 @@ export default async function ReservationCalendarPage({ searchParams }: Reservat
 
   return (
     <div className="page-shell">
-      <div className="page-container">
+      <div className="page-container min-w-0 overflow-x-hidden">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="page-title">Reservation Calendar</h1>
@@ -152,75 +178,19 @@ export default async function ReservationCalendarPage({ searchParams }: Reservat
           ))}
         </div>
 
-        <Card className="glass-panel overflow-hidden border-zinc-200">
-          <CardContent className="p-0">
-            <div className="grid grid-cols-7 border-b border-zinc-200 bg-zinc-50">
-              {WEEK_DAYS.map((day) => (
-                <div key={day} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7">
-              {days.map((day) => {
-                const inMonth = isSameMonth(day, focusedMonth);
-
-                const dayReservations = reservations.filter((reservation) =>
-                  stayOverlapsDate(reservation.check_in, reservation.check_out, day),
-                );
-
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`min-h-32 border-b border-r border-zinc-100 p-2 align-top ${inMonth ? "bg-white" : "bg-zinc-50/70"}`}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span
-                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                          isToday(day)
-                            ? "bg-[#ff6900] text-white"
-                            : inMonth
-                              ? "text-zinc-700"
-                              : "text-zinc-400"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </span>
-                      {dayReservations.length > 0 ? (
-                        <Badge variant="outline" className="text-[10px] font-medium">
-                          {dayReservations.length}
-                        </Badge>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-1">
-                      {dayReservations.slice(0, 3).map((reservation) => {
-                        const guestName = getGuestName(reservation.guests);
-                        return (
-                          <Link
-                            key={`${day.toISOString()}-${reservation.id}`}
-                            href={`/dashboard/reservations/${reservation.id}`}
-                            className={`block truncate rounded px-2 py-1 text-xs font-medium ${STATUS_TONE[reservation.status] ?? "bg-zinc-100 text-zinc-700"}`}
-                            title={`${guestName} (${reservation.status.replace("_", " ")})`}
-                          >
-                            {guestName}
-                          </Link>
-                        );
-                      })}
-
-                      {dayReservations.length > 3 ? (
-                        <p className="px-1 text-[11px] text-zinc-500">
-                          +{dayReservations.length - 3} more
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="min-w-0 overflow-hidden">
+          <ReservationCalendarDnd
+            activePropertyId={activePropertyId}
+            reservations={calendarReservations}
+            monthIso={format(focusedMonth, "yyyy-MM")}
+            guestOptions={guestOptions}
+            ratePlanOptions={ratePlanOptions}
+            roomOptions={roomOptions}
+            rooms={calendarRooms}
+            roomTypeOptions={roomTypeOptions}
+            blocks={calendarBlocks}
+          />
+        </div>
       </div>
     </div>
   );

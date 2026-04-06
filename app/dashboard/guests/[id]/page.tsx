@@ -10,6 +10,7 @@ import Link from "next/link";
 import { GuestDocumentsSection } from "./guest-documents-section";
 import { ClearLocalStorageOnMount } from "@/components/custom/clear-local-storage-on-mount";
 import { NEW_GUEST_DRAFT_KEY } from "@/lib/guests/draft";
+import { formatCurrencyMinor } from "@/lib/pms/formatting";
 
 interface GuestDetailPageProps {
   params: Promise<{ id: string }>;
@@ -36,7 +37,7 @@ export default async function GuestDetailPage({ params, searchParams }: GuestDet
     notFound();
   }
 
-  const { guest, preferences, vipFlag } = result;
+  const { guest, preferences, vipFlag, linkedGuests, linkedGuestLinks, linkedStayHistory, spaServiceTimeline, spaFinancialTimeline } = result;
 
   return (
     <>
@@ -137,6 +138,98 @@ export default async function GuestDetailPage({ params, searchParams }: GuestDet
 
       {/* Documents (uses MediaUpload) */}
       <GuestDocumentsSection guestId={id} propertyId={propertyId ?? ""} />
+
+      <Card className="glass-panel">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Cross-Property Identity</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {linkedGuests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No linked guest identities found for this profile.</p>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Linked Profiles</p>
+                <ul className="mt-2 space-y-2">
+                  {linkedGuests.map((linkedGuest) => (
+                    <li key={linkedGuest.id} className="rounded-lg border border-zinc-200 px-3 py-2 text-sm">
+                      <p className="font-medium text-zinc-900">
+                        {linkedGuest.first_name} {linkedGuest.last_name}
+                      </p>
+                      <p className="text-xs text-zinc-600">{linkedGuest.email ?? linkedGuest.phone ?? linkedGuest.id.slice(0, 8)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Recent Linked Stays</p>
+                {linkedStayHistory.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No stays found for linked profiles yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {linkedStayHistory.map((stay) => (
+                      <li key={stay.id} className="rounded-lg border border-zinc-200 px-3 py-2 text-sm">
+                        <p className="font-medium text-zinc-900">{stay.linkedGuestName} · {stay.propertyName}</p>
+                        <p className="text-xs text-zinc-600">{stay.checkIn} → {stay.checkOut} · {stay.status}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <p className="text-xs text-zinc-500">Active links: {linkedGuestLinks.length}</p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="glass-panel">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Service Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {spaServiceTimeline.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No spa service events for this guest yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {spaServiceTimeline.map((event) => (
+                <li key={event.id} className="rounded-lg border border-zinc-200 px-3 py-2">
+                  <p className="text-sm font-medium text-zinc-900">{event.title}</p>
+                  <p className="text-xs text-zinc-600">{event.subtitle}</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">{new Date(event.at).toLocaleString("en-GB")}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="glass-panel">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Financial Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {spaFinancialTimeline.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No spa financial events for this guest yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {spaFinancialTimeline.map((event) => (
+                <li key={event.id} className="rounded-lg border border-zinc-200 px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">{event.title}</p>
+                      <p className="text-xs text-zinc-600">{event.subtitle}</p>
+                    </div>
+                    <p className="text-sm font-medium text-zinc-900">{formatCurrencyMinor(event.amountMinor, event.currencyCode)}</p>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-1">{new Date(event.at).toLocaleString("en-GB")}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
       </div>
     </div>
     </>

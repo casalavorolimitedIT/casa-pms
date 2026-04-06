@@ -68,14 +68,21 @@ Actions:
 
 ## Acceptance Criteria
 - [x] Work-order lifecycle works from creation to close with ownership trail.
-- [ ] Preventive schedule recurrence creates actionable future items.
-- [ ] OOO periods block sellable inventory immediately.
-- [ ] OOO release restores inventory and audit trace remains intact.
-- [ ] Asset register supports warranty and service audit history.
+- [x] Preventive schedule recurrence creates actionable future items.
+- [x] OOO periods block sellable inventory immediately.
+- [x] OOO release restores inventory and audit trace remains intact.
+- [x] Asset register supports warranty and service audit history.
 
 ## Agent Tracking
-- Status: In Progress
+- Status: Complete
 - Owner: Copilot
 - Start Date: 2026-04-03
 - Target Date:
 - Blockers:
+- Notes:
+	- 2026-04-05: Added `pms.asset_service_events` migration with indexes and RLS (`supabase/migrations/055_m05_asset_service_history.sql`).
+	- 2026-04-05: Added `logServiceEvent` server action and asset detail UI for logging + timeline audit trail (`app/dashboard/assets/actions.ts`, `app/dashboard/assets/[id]/page.tsx`).
+	- 2026-04-05: Added preventive maintenance schema (`pms.maintenance_schedules`, `pms.maintenance_schedule_instances`) with RLS (`supabase/migrations/056_m05_preventive_maintenance.sql`).
+	- 2026-04-05: Added maintenance actions (`createSchedule`, `createRecurringInstances`, `logMaintenanceCompleted`) and route UI at `app/dashboard/maintenance/page.tsx`.
+	- OOO block flow: creating a work order with room blocking writes `out_of_order_periods` and sets room status to `out_of_order`.
+	- OOO release flow: resolving with release updates `out_of_order_periods.released_at/released_by`, sets room status to `inspection`, and writes `room_status_log` for traceability.

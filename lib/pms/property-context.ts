@@ -1,36 +1,14 @@
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
 import { ACTIVE_PROPERTY_COOKIE } from "@/lib/pms/property-cookie";
+import { getScopedPropertiesForCurrentUser } from "@/lib/pms/property-scope";
 
 export async function getActivePropertyId() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const scoped = await getScopedPropertiesForCurrentUser();
+  if (!scoped.userId) {
     return process.env.DEMO_PROPERTY_ID?.trim() ?? "";
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("organization_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const organizationId = profile?.organization_id;
-  if (!organizationId) {
-    return process.env.DEMO_PROPERTY_ID?.trim() ?? "";
-  }
-
-  const { data: userProperties } = await supabase
-    .from("properties")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .order("name", { ascending: true });
-
-  const allowedPropertyIds = new Set((userProperties ?? []).map((property) => property.id));
+  const allowedPropertyIds = new Set(scoped.properties.map((property) => property.id));
 
   const cookieStore = await cookies();
   const cookiePropertyId = cookieStore.get(ACTIVE_PROPERTY_COOKIE)?.value?.trim() ?? "";
@@ -39,7 +17,7 @@ export async function getActivePropertyId() {
     return cookiePropertyId;
   }
 
-  const firstPropertyId = userProperties?.[0]?.id;
+  const firstPropertyId = scoped.properties[0]?.id;
   if (firstPropertyId) {
     return firstPropertyId;
   }

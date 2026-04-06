@@ -39,7 +39,7 @@ export default async function DashboardLayout({
     <SidebarProvider>
       <NoiseOverlay />
       <AppSidebar variant="floating" />
-      <SidebarInset className="relative bg-transparent">
+      <SidebarInset className="relative min-w-0 bg-transparent">
         {/* Ambient warm bloom — very subtle, top-right corner */}
         <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
           <div className="absolute -top-24 right-0 h-120 w-120 rounded-full bg-[#ff6900] opacity-[0.08] blur-[120px]" />
@@ -67,7 +67,7 @@ export default async function DashboardLayout({
             </div>
           </div>
         </header>
-        <main className="relative z-10 flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <main className="relative z-10 min-w-0 flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
           <PageTransition>{children}</PageTransition>
         </main>
       </SidebarInset>

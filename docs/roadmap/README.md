@@ -35,11 +35,11 @@ Use this folder as the execution tracker for the build. Each milestone has:
 - [ ] M02 complete
 - [x] M03 complete
 - [x] M04 complete
-- [ ] M05 complete
-- [ ] M06 complete
+- [x] M05 complete
+- [x] M06 complete
 - [x] M07 complete
-- [ ] M08 complete
-- [ ] M09 complete
+- [x] M08 complete
+- [x] M09 complete
 - [ ] M10 complete
 - [ ] M11 complete
 - [ ] M12 complete

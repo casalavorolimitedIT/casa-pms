@@ -74,7 +74,7 @@ const data = {
     },
     {
       title: "Core PMS",
-      url: "/dashboard/reservations",
+      url: "/dashboard/reservations/calendar",
       icon: (
         <HugeiconsIcon icon={BedIcon} strokeWidth={2} />
       ),
@@ -96,7 +96,12 @@ const data = {
         },
         {
           title: "Reservations",
-          url: "/dashboard/reservations",
+          url: "/dashboard/reservations/calendar",
+          requiredPermission: "reservations.view",
+        },
+        {
+          title: "Central Reservations",
+          url: "/dashboard/central-reservations",
           requiredPermission: "reservations.view",
         },
       ],
@@ -144,6 +149,16 @@ const data = {
           requiredPermission: "rates.view",
         },
         {
+          title: "Chain Rates",
+          url: "/dashboard/rates/chain",
+          requiredPermission: "rates.manage",
+        },
+        {
+          title: "Chain Reports",
+          url: "/dashboard/chain-reports",
+          requiredPermission: "reports.view",
+        },
+        {
           title: "Agents",
           url: "/dashboard/agents",
           requiredPermission: "rates.manage",
@@ -151,7 +166,7 @@ const data = {
       ],
     },
     {
-      title: "Operations",
+      title: "Operations Desk",
       url: "/dashboard/front-desk",
       icon: (
         <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
@@ -173,6 +188,25 @@ const data = {
           requiredPermission: "rooms.view",
         },
         {
+          title: "Night Audit",
+          url: "/dashboard/night-audit",
+          requiredPermission: "night_audit.run",
+        },
+        {
+          title: "Cashier",
+          url: "/dashboard/cashier",
+          requiredPermission: "cash_shift.manage",
+        },
+      ],
+    },
+    {
+      title: "Operations Service",
+      url: "/dashboard/housekeeping",
+      icon: (
+        <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
+      ),
+      items: [
+        {
           title: "Housekeeping",
           url: "/dashboard/housekeeping",
           requiredPermission: "housekeeping.view",
@@ -183,9 +217,34 @@ const data = {
           requiredPermission: "work_orders.view",
         },
         {
+          title: "Maintenance",
+          url: "/dashboard/maintenance",
+          requiredPermission: "work_orders.view",
+        },
+        {
           title: "Assets",
           url: "/dashboard/assets",
           requiredPermission: "settings.manage",
+        },
+        {
+          title: "Spa",
+          url: "/dashboard/spa/bookings",
+          requiredPermission: "spa.manage",
+        },
+        {
+          title: "Spa Bookings",
+          url: "/dashboard/spa/bookings",
+          requiredPermission: "spa.manage",
+        },
+        {
+          title: "Spa Therapists",
+          url: "/dashboard/spa/therapists",
+          requiredPermission: "spa.manage",
+        },
+        {
+          title: "Spa Memberships",
+          url: "/dashboard/spa/memberships",
+          requiredPermission: "spa.manage",
         },
         {
           title: "Tasks",
@@ -202,11 +261,49 @@ const data = {
           url: "/dashboard/linen",
           requiredPermission: "linen.manage",
         },
+      ],
+    },
+    {
+      title: "Operations F&B",
+      url: "/dashboard/minibar",
+      icon: (
+        <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
+      ),
+      items: [
         {
           title: "Minibar",
           url: "/dashboard/minibar",
           requiredPermission: "minibar.manage",
         },
+        {
+          title: "F&B Menus",
+          url: "/dashboard/fnb/menus",
+          requiredPermission: "minibar.manage",
+        },
+        {
+          title: "F&B QR",
+          url: "/dashboard/fnb/qr",
+          requiredPermission: "minibar.manage",
+        },
+        {
+          title: "Kitchen Queue",
+          url: "/dashboard/fnb/kitchen",
+          requiredPermission: "minibar.manage",
+        },
+        {
+          title: "F&B Inventory",
+          url: "/dashboard/fnb/inventory",
+          requiredPermission: "minibar.manage",
+        },
+      ],
+    },
+    {
+      title: "Operations Guest",
+      url: "/dashboard/concierge",
+      icon: (
+        <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
+      ),
+      items: [
         {
           title: "Wake-up Calls",
           url: "/dashboard/front-desk/wake-up-calls",
@@ -216,16 +313,6 @@ const data = {
           title: "DND Log",
           url: "/dashboard/dnd-log",
           requiredPermission: "dnd.manage",
-        },
-        {
-          title: "Night Audit",
-          url: "/dashboard/night-audit",
-          requiredPermission: "night_audit.run",
-        },
-        {
-          title: "Cashier",
-          url: "/dashboard/cashier",
-          requiredPermission: "cash_shift.manage",
         },
         {
           title: "Concierge",
@@ -333,7 +420,7 @@ const data = {
     },
     {
       name: "Reservations",
-      url: "/dashboard/reservations",
+      url: "/dashboard/reservations/calendar",
       icon: (
         <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />
       ),
@@ -383,14 +470,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return {
       ...group,
       items: group.items?.filter(
-        (item: any) => !item.requiredPermission || hasPermission(item.requiredPermission)
+        (item: { requiredPermission?: string }) => !item.requiredPermission || hasPermission(item.requiredPermission)
       ),
     };
   }).filter((group) => !group.items || group.items.length > 0);
 
-  const filteredProjects = data.projects.filter(
-    (project: any) => !project.requiredPermission || hasPermission(project.requiredPermission)
-  );
+  const filteredProjects = data.projects;
 
   return (
     <Sidebar collapsible="icon" {...props}>

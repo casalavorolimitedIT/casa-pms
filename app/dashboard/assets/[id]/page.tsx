@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { FormDateTimeField } from "@/components/ui/form-date-time-field";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
-import { updateAsset } from "../actions";
+import { logServiceEvent, updateAsset } from "../actions";
 import { formatIsoDate } from "@/lib/pms/formatting";
+import { Textarea } from "@/components/ui/textarea";
 
 interface AssetDetailPageProps {
   params: Promise<{ id: string }>;
@@ -44,13 +45,37 @@ export default async function AssetDetailPage({ params, searchParams }: AssetDet
     redirect(`/dashboard/assets/${id}?error=${encodeURIComponent(result?.error ?? "Unable to update asset.")}`);
   };
 
+  const logServiceAction = async (formData: FormData) => {
+    "use server";
+    const result = await logServiceEvent(formData);
+    if (result?.success) {
+      redirect(`/dashboard/assets/${id}?ok=${encodeURIComponent("Service event logged.")}`);
+    }
+    redirect(`/dashboard/assets/${id}?error=${encodeURIComponent(result?.error ?? "Unable to log service event.")}`);
+  };
+
   const supabase = await createClient();
-  const { data: asset } = await supabase
+  const [{ data: asset }, { data: serviceEvents }, { data: linkedWorkOrders }] = await Promise.all([
+    supabase
     .from("assets")
     .select("id, name, category, purchase_date, warranty_until, created_at")
     .eq("id", id)
     .eq("property_id", activePropertyId)
-    .maybeSingle();
+    .maybeSingle(),
+    supabase
+      .from("asset_service_events")
+      .select("id, service_type, vendor, cost_minor, notes, serviced_at, created_at, work_order_id, profiles:created_by(full_name,email)")
+      .eq("asset_id", id)
+      .eq("property_id", activePropertyId)
+      .order("serviced_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("work_orders")
+      .select("id, title")
+      .eq("property_id", activePropertyId)
+      .order("created_at", { ascending: false })
+      .limit(200),
+  ]);
 
   if (!asset) {
     notFound();
@@ -75,7 +100,7 @@ export default async function AssetDetailPage({ params, searchParams }: AssetDet
 
         {/* Premium Header Profile */}
         <div className="relative mb-14 rounded-[2rem] bg-white p-8 md:p-14 shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-zinc-100 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-zinc-200 via-zinc-300 to-zinc-100"></div>
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-linear-to-r from-zinc-200 via-zinc-300 to-zinc-100"></div>
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-8">
             <div className="space-y-5 max-w-2xl">
@@ -161,6 +186,102 @@ export default async function AssetDetailPage({ params, searchParams }: AssetDet
             </div>
           </div>
 
+        </div>
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-medium tracking-tight text-zinc-900">Log Service Event</h2>
+            <p className="mt-1 text-sm text-zinc-500">Capture maintenance actions for warranty and audit traceability.</p>
+
+            <form action={logServiceAction} className="mt-5 grid gap-4">
+              <input type="hidden" name="assetId" value={asset.id} />
+              <input type="hidden" name="propertyId" value={activePropertyId} />
+
+              <div className="grid gap-2">
+                <Label htmlFor="serviceType">Service Type</Label>
+                <Input id="serviceType" name="serviceType" defaultValue="preventive_maintenance" required />
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="serviceDate">Service Date</Label>
+                  <FormDateTimeField name="serviceDate" includeTime placeholder="Select date and time" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="costMinor">Cost (minor units)</Label>
+                  <Input id="costMinor" name="costMinor" type="number" min={0} placeholder="e.g. 15000" />
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="vendor">Vendor (optional)</Label>
+                  <Input id="vendor" name="vendor" placeholder="In-house team or vendor" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="workOrderId">Linked Work Order (optional)</Label>
+                  <select
+                    id="workOrderId"
+                    name="workOrderId"
+                    title="Linked work order"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    defaultValue=""
+                  >
+                    <option value="">None</option>
+                    {(linkedWorkOrders ?? []).map((wo) => (
+                      <option key={wo.id} value={wo.id}>
+                        {wo.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="serviceNotes">Notes</Label>
+                <Textarea id="serviceNotes" name="notes" rows={3} placeholder="Parts replaced, findings, follow-up actions" />
+              </div>
+
+              <FormSubmitButton idleText="Save Service Event" pendingText="Saving..." className="w-full sm:w-auto" />
+            </form>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-medium tracking-tight text-zinc-900">Service History</h2>
+            <p className="mt-1 text-sm text-zinc-500">Chronological audit trail for maintenance and repairs.</p>
+
+            {serviceEvents && serviceEvents.length > 0 ? (
+              <ul className="mt-5 space-y-3">
+                {serviceEvents.map((event) => {
+                  const profileRaw = event.profiles as { full_name?: string | null; email?: string | null } | Array<{ full_name?: string | null; email?: string | null }> | null;
+                  const profile = Array.isArray(profileRaw) ? profileRaw[0] : profileRaw;
+                  return (
+                    <li key={event.id} className="rounded-lg border border-zinc-200 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-zinc-900">{event.service_type}</p>
+                          <p className="text-xs text-zinc-500">
+                            {new Date(event.serviced_at).toLocaleString("en-GB")}
+                            {event.vendor ? ` · ${event.vendor}` : ""}
+                            {event.work_order_id ? " · linked work order" : ""}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {typeof event.cost_minor === "number" ? `${event.cost_minor}` : "No cost"}
+                        </Badge>
+                      </div>
+                      {event.notes ? <p className="mt-2 text-sm text-zinc-600">{event.notes}</p> : null}
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Logged by {profile?.full_name?.trim() || profile?.email || "System"}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-5 text-sm text-zinc-500">No service events logged yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

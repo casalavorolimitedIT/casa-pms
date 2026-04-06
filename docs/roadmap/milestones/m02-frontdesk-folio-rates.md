@@ -86,8 +86,10 @@ Components:
 - Owner:
 - Start Date: 2026-04-02
 - Target Date:
-- Blockers: Run live sandbox validations and capture evidence outputs.
+- Blockers: `STRIPE_SECRET_KEY` and `PAYSTACK_SECRET_KEY` are not present in `.env.local`, so live sandbox validation cannot complete.
 - Notes:
 	- Added runnable validation scripts: `npm run validate:stripe:sandbox` and `npm run validate:paystack:sandbox`.
 	- Validation runbook: `docs/payment-sandbox-validation.md`.
-	- Local execution currently blocked until `STRIPE_SECRET_KEY` and `PAYSTACK_SECRET_KEY` are present in `.env.local`.
+	- 2026-04-05: Executed `npm run validate:stripe:sandbox` -> failed with `Missing STRIPE_SECRET_KEY`.
+	- 2026-04-05: Executed `npm run validate:paystack:sandbox` -> failed with `Missing PAYSTACK_SECRET_KEY`.
+	- Milestone can be completed immediately after keys are added and evidence rows are captured in `docs/payment-sandbox-validation.md`.

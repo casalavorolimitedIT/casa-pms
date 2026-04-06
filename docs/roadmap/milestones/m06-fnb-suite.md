@@ -92,15 +92,25 @@ Actions:
 - M02 complete.
 
 ## Acceptance Criteria
-- [ ] Menu model supports categories, modifiers, and outlet pricing.
-- [ ] QR orders reliably reach kitchen queue and status pipeline.
-- [ ] Completed kitchen tickets can trigger folio posting.
-- [ ] POS webhook validates signature before posting.
-- [ ] Inventory movements are auditable and alerting is functional.
+- [x] Menu model supports categories, modifiers, and outlet pricing.
+- [x] QR orders reliably reach kitchen queue and status pipeline.
+- [x] Completed kitchen tickets can trigger folio posting.
+- [x] POS webhook validates signature before posting.
+- [x] Inventory movements are auditable and alerting is functional.
 
 ## Agent Tracking
-- Status: Planned
-- Owner:
-- Start Date:
+- Status: Complete
+- Owner: Copilot
+- Start Date: 2026-04-05
 - Target Date:
 - Blockers:
+- Notes:
+	- 2026-04-05: Added menu-management schema (`menu_categories`, `menu_items`, `menu_item_modifiers`, `outlet_menu_item_prices`) with RLS in `supabase/migrations/057_m06_menu_management.sql`.
+	- 2026-04-05: Added Module 22 actions in `app/dashboard/fnb/menus/actions.ts` (`createOutlet`, `createMenuCategory`, `createMenuItem`, `createModifier`, `updateMenuItemPrice`).
+	- 2026-04-05: Added Module 22 UI route `app/dashboard/fnb/menus/page.tsx` and sidebar navigation entry under Operations.
+	- 2026-04-05: Added QR + kitchen schema pipeline (`order_qr_codes`, `order_items`, order status columns) in `supabase/migrations/058_m06_qr_kitchen_pipeline.sql`.
+	- 2026-04-05: Added Module 23/24 actions in `app/dashboard/fnb/actions.ts` (`submitGuestOrder`, `confirmOrder`, `markItemReady`, `bumpTicket`, `markTicketComplete`, `postOrderToFolio`).
+	- 2026-04-05: Added routes `app/dashboard/fnb/qr/page.tsx`, `app/dashboard/fnb/kitchen/page.tsx`, and guest ordering page `app/(guest)/order/[qrCode]/page.tsx`.
+	- 2026-04-05: Added POS webhook signature utility (`lib/security/webhook-signature.ts`) and signed endpoint (`app/api/pos-webhook/route.ts`) with idempotency/audit table (`supabase/migrations/059_m06_pos_webhook_events.sql`).
+	- 2026-04-05: Added inventory/stockroom schema (`inventory_items`, `inventory_movements`, `purchase_orders`, `purchase_order_lines`, `inventory_alerts`) in `supabase/migrations/060_m06_inventory_stockroom.sql`.
+	- 2026-04-05: Added inventory actions (`adjustStock`, `createPurchaseOrder`, `receivePurchaseOrder`, `generateLowStockAlert`) and route UI `app/dashboard/fnb/inventory/page.tsx`.
