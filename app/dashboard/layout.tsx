@@ -51,7 +51,7 @@ export default async function DashboardLayout({
               <SidebarTrigger />
               <Separator orientation="vertical" className="h-5" />
               <div className="hidden sm:block">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">Operations Desk</p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500 whitespace-nowrap">Operations Desk</p>
                 <p className="text-sm font-semibold text-zinc-900">{formattedDate}</p>
               </div>
               <PropertySwitcher />

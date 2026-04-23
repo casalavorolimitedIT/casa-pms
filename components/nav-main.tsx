@@ -105,7 +105,7 @@ export function NavMain({
     }[]
   }[]
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile,toggleSidebar } = useSidebar()
 
   return (
     <SidebarGroup>
@@ -137,7 +137,8 @@ export function NavMain({
                 />
               }
             >
-              {item.icon}
+              <span className="" onClick={toggleSidebar} role='button'>{item.icon}</span>
+              
               <span>{item.title}</span>
               <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
             </CollapsibleTrigger>

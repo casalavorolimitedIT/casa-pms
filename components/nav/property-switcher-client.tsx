@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,7 +132,7 @@ export function PropertySwitcherClient({
     setInlineStatus(null);
   }
 
-  function handleEditProperty(event: FormEvent<HTMLFormElement>) {
+  function handleEditProperty(event: ChangeEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingId) return;
 

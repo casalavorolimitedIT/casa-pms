@@ -253,6 +253,7 @@ export function ReservationCalendarBookingModal({
                 <Label>Check-in</Label>
                 <FormDateTimeField
                   name="checkIn"
+                  disablePastDates={true}
                   defaultValue={draft.checkIn}
                   includeTime={false}
                   onValueChange={(value) => updateField("checkIn", value)}

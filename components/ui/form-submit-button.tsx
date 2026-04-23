@@ -15,6 +15,7 @@ export function FormSubmitButton({
   idleText,
   pendingText = "Please wait...",
   disabled,
+  className,
   ...props
 }: FormSubmitButtonProps) {
   const { pending } = useFormStatus();
@@ -22,6 +23,7 @@ export function FormSubmitButton({
   return (
     <Button
       type="submit"
+      className={className}
       aria-busy={pending}
       disabled={pending || disabled}
       {...props}

@@ -1,21 +1,39 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { usePermissions } from "@/components/permissions-provider"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { usePermissions } from "@/components/permissions-provider";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { LayoutBottomIcon, AudioWave01Icon, CommandIcon, Home11Icon, UserGroupIcon, BedIcon, Calendar03Icon, Invoice03Icon, DollarSquareIcon, PieChartIcon, FolderOpenIcon, Building06Icon, UserIdVerificationIcon, Settings01Icon, SparklesIcon } from "@hugeicons/core-free-icons"
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  LayoutBottomIcon,
+  AudioWave01Icon,
+  CommandIcon,
+  Home11Icon,
+  UserGroupIcon,
+  BedIcon,
+  Calendar03Icon,
+  Invoice03Icon,
+  DollarSquareIcon,
+  PieChartIcon,
+  FolderOpenIcon,
+  Building06Icon,
+  UserIdVerificationIcon,
+  Settings01Icon,
+  SparklesIcon,
+} from "@hugeicons/core-free-icons";
+import Image from "next/image";
 
 // This is sample data.
 const data = {
@@ -27,23 +45,17 @@ const data = {
   teams: [
     {
       name: "Acme Inc",
-      logo: (
-        <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} />
-      ),
+      logo: <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} />,
       plan: "Enterprise",
     },
     {
       name: "Acme Corp.",
-      logo: (
-        <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
-      ),
+      logo: <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />,
       plan: "Startup",
     },
     {
       name: "Evil Corp.",
-      logo: (
-        <HugeiconsIcon icon={CommandIcon} strokeWidth={2} />
-      ),
+      logo: <HugeiconsIcon icon={CommandIcon} strokeWidth={2} />,
       plan: "Free",
     },
   ],
@@ -51,9 +63,7 @@ const data = {
     {
       title: "Overview",
       url: "/dashboard",
-      icon: (
-        <HugeiconsIcon icon={Home11Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Home11Icon} strokeWidth={2} />,
       isActive: true,
       items: [
         {
@@ -80,9 +90,7 @@ const data = {
     {
       title: "Rooms & Stays",
       url: "/dashboard/reservations/calendar",
-      icon: (
-        <HugeiconsIcon icon={BedIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={BedIcon} strokeWidth={2} />,
       items: [
         {
           title: "Reservations",
@@ -119,9 +127,7 @@ const data = {
     {
       title: "Guest Services",
       url: "/dashboard/concierge",
-      icon: (
-        <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />,
       items: [
         {
           title: "Concierge",
@@ -178,9 +184,7 @@ const data = {
     {
       title: "Housekeeping",
       url: "/dashboard/housekeeping",
-      icon: (
-        <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />,
       items: [
         {
           title: "Housekeeping Board",
@@ -207,9 +211,7 @@ const data = {
     {
       title: "Engineering",
       url: "/dashboard/work-orders",
-      icon: (
-        <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />,
       items: [
         {
           title: "Work Orders",
@@ -231,9 +233,7 @@ const data = {
     {
       title: "F&B",
       url: "/dashboard/fnb/menus",
-      icon: (
-        <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={2} />,
       items: [
         {
           title: "F&B Menus",
@@ -265,9 +265,7 @@ const data = {
     {
       title: "Spa",
       url: "/dashboard/spa/bookings",
-      icon: (
-        <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />,
       items: [
         {
           title: "Spa Services",
@@ -299,9 +297,7 @@ const data = {
     {
       title: "Commercial",
       url: "/dashboard/rates",
-      icon: (
-        <HugeiconsIcon icon={DollarSquareIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={DollarSquareIcon} strokeWidth={2} />,
       items: [
         {
           title: "Rates",
@@ -358,9 +354,7 @@ const data = {
     {
       title: "Reports",
       url: "/dashboard/reports",
-      icon: (
-        <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />,
       items: [
         {
           title: "Overview",
@@ -402,9 +396,7 @@ const data = {
     {
       title: "Finance & Audit",
       url: "/dashboard/folios",
-      icon: (
-        <HugeiconsIcon icon={Invoice03Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Invoice03Icon} strokeWidth={2} />,
       items: [
         {
           title: "Folios",
@@ -426,9 +418,7 @@ const data = {
     {
       title: "Settings",
       url: "/dashboard/settings",
-      icon: (
-        <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />,
       items: [
         {
           title: "General",
@@ -467,91 +457,97 @@ const data = {
     {
       name: "Rooms",
       url: "/dashboard/rooms",
-      icon: (
-        <HugeiconsIcon icon={BedIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={BedIcon} strokeWidth={2} />,
     },
     {
       name: "Guests",
       url: "/dashboard/guests",
-      icon: (
-        <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />,
     },
     {
       name: "Staff",
       url: "/dashboard/staff",
-      icon: (
-        <HugeiconsIcon icon={UserIdVerificationIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={UserIdVerificationIcon} strokeWidth={2} />,
     },
     {
       name: "Reservations",
       url: "/dashboard/reservations/calendar",
-      icon: (
-        <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />,
     },
     {
       name: "Stay View",
       url: "/dashboard/stay-view",
-      icon: (
-        <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />,
     },
     {
       name: "Folios",
       url: "/dashboard/folios",
-      icon: (
-        <HugeiconsIcon icon={Invoice03Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Invoice03Icon} strokeWidth={2} />,
     },
     {
       name: "Rates",
       url: "/dashboard/rates",
-      icon: (
-        <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />,
     },
     {
       name: "Reports",
       url: "/dashboard/reports",
-      icon: (
-        <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />,
     },
     {
       name: "Properties",
       url: "/dashboard",
-      icon: (
-        <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />
-      ),
+      icon: <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { hasPermission } = usePermissions();
+  const { state } = useSidebar();
+  const layoutState = state as "collapsed" | "expanded";
 
-  const filteredNavMain = data.navMain.map((group) => {
-    return {
-      ...group,
-      items: group.items?.filter(
-        (item: { requiredPermission?: string }) => !item.requiredPermission || hasPermission(item.requiredPermission)
-      ),
-    };
-  }).filter((group) => !group.items || group.items.length > 0);
+  const filteredNavMain = data.navMain
+    .map((group) => {
+      return {
+        ...group,
+        items: group.items?.filter(
+          (item: { requiredPermission?: string }) =>
+            !item.requiredPermission || hasPermission(item.requiredPermission),
+        ),
+      };
+    })
+    .filter((group) => !group.items || group.items.length > 0);
 
   const filteredProjects = data.projects;
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="rounded-xl border border-sidebar-border/80 bg-white/70 p-3 backdrop-blur-sm dark:bg-zinc-900/70">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/60">Casa PMS</p>
-          <p className="mt-1 text-sm font-semibold text-sidebar-foreground">Property Operations</p>
+        <div
+          className={`rounded-xl border border-sidebar-border/80 bg-white/70 ${layoutState === "collapsed" ? "p-0.5" : "p-3"} backdrop-blur-sm dark:bg-zinc-900/70`}
+        >
+          {layoutState === "collapsed" ? null : (
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/60">
+              Casa PMS
+            </p>
+          )}
+
+          <div className="mt-1 text-sm font-semibold text-sidebar-foreground">
+            {layoutState === "collapsed" ? (
+              <Image
+                src="/casalogo2.png"
+                alt="Casa PMS"
+                width={24}
+                height={24}
+                className="w-[30px] aspect-square object-cover relative -top-0.5"
+              />
+            ) : (
+              "Property Operations"
+            )}
+          </div>
         </div>
-        <TeamSwitcher teams={data.teams} />
+        {/* <TeamSwitcher teams={data.teams} /> */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={filteredNavMain} />
@@ -562,5 +558,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

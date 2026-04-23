@@ -141,7 +141,7 @@
 
 @layer components {
   .page-shell {
-    @apply min-h-full min-w-0 p-6 md:p-8;
+    @apply min-h-full min-w-0 p-3 md:p-0;
   }
 
   .page-container {

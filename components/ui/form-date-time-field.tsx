@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import type { MonthCaptionProps } from "react-day-picker";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar03Icon, Clock01Icon } from "@hugeicons/core-free-icons";
@@ -49,6 +49,7 @@ export function FormDateTimeField({
   className,
   includeTime = true,
   editableYear = true,
+  disablePastDates = false,
   onValueChange,
 }: {
   name: string;
@@ -58,6 +59,8 @@ export function FormDateTimeField({
   includeTime?: boolean;
   /** Allow clicking the year in the calendar header to jump to any year */
   editableYear?: boolean;
+  /** Disable selecting calendar dates earlier than today */
+  disablePastDates?: boolean;
   onValueChange?: (value: string) => void;
 }) {
   const initial = React.useMemo(() => parseLocalDateTime(defaultValue), [defaultValue]);
@@ -73,6 +76,10 @@ export function FormDateTimeField({
     const y = (initial ?? new Date()).getFullYear();
     return Math.floor(y / YEARS_PER_GRID) * YEARS_PER_GRID;
   });
+  const disabledDays = React.useMemo(
+    () => (disablePastDates ? { before: startOfDay(new Date()) } : undefined),
+    [disablePastDates],
+  );
 
   React.useEffect(() => {
     const next = parseLocalDateTime(defaultValue);
@@ -85,8 +92,8 @@ export function FormDateTimeField({
   const serialized = toSerializedValue(selectedDate, hour, minute, includeTime);
   const display = selectedDate
     ? includeTime
-      ? `${format(selectedDate, "EEE, MMM d")}, ${hour}:${minute}`
-      : format(selectedDate, "EEE, MMM d")
+      ? `${format(selectedDate, "EEE, MMM d, yyyy")}, ${hour}:${minute}`
+      : format(selectedDate, "EEE, MMM d, yyyy")
     : placeholder;
 
   function handleDateChange(value: Date | null) {
@@ -223,6 +230,7 @@ export function FormDateTimeField({
               <Calendar
                 mode="single"
                 selected={selectedDate ?? undefined}
+                disabled={disabledDays}
                 onSelect={(value) => handleDateChange(value ?? null)}
                 className="mx-auto"
                 {...(editableYear
