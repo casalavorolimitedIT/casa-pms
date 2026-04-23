@@ -32,6 +32,7 @@ export async function preCheckInReservation(reservationId: string) {
 
   revalidatePath("/dashboard/arrivals-departures");
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
 }
 
 export async function markReservationNoShow(reservationId: string) {
@@ -46,4 +47,5 @@ export async function markReservationNoShow(reservationId: string) {
 
   revalidatePath("/dashboard/arrivals-departures");
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
 }

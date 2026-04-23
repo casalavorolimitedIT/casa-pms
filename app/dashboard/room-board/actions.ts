@@ -139,6 +139,7 @@ export async function reassignReservationRoom(input: { reservationId: string; to
 
   revalidatePath("/dashboard/room-board");
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
 
   return { success: true };
 }

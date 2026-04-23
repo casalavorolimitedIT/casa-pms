@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserOrganizationId } from "@/app/dashboard/actions/property-actions";
 import { getLinkedGuestsForGuest } from "@/lib/pms/guest-identity";
+import { getActivePropertyCurrency } from "@/lib/pms/property-context";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -218,6 +219,7 @@ export async function searchGuests(
 
 export async function getGuest(id: string) {
   const supabase = await createClient();
+  const activeCurrency = await getActivePropertyCurrency();
 
   const [guestRes, prefsRes, vipRes, reservationsRes] = await Promise.all([
     supabase
@@ -389,7 +391,7 @@ export async function getGuest(id: string) {
       title: "Spa standalone settlement",
       subtitle: `${settlement.method}${settlement.reference ? ` · ${settlement.reference}` : ""}${settlement.status ? ` · ${settlement.status}` : ""}`,
       amountMinor: settlement.amount_minor,
-      currencyCode: "USD",
+      currencyCode: activeCurrency,
     })),
     ...memberships
       .filter((membership) => membership.sold_amount_minor > 0)
@@ -400,7 +402,7 @@ export async function getGuest(id: string) {
         title: `Membership sold · ${membership.plan_name}`,
         subtitle: `${membership.status} · valid ${membership.valid_from} to ${membership.valid_until}`,
         amountMinor: membership.sold_amount_minor,
-        currencyCode: "USD",
+        currencyCode: activeCurrency,
       })),
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 

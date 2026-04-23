@@ -2,6 +2,7 @@ import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenti
 import { redirect } from "next/navigation";
 import { getInHouseReservations, getVacantRooms, moveRoom } from "../actions/checkin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,23 @@ export default async function RoomMovePage({ searchParams }: RoomMovePageProps) 
     getInHouseReservations(activePropertyId),
     getVacantRooms(activePropertyId),
   ]);
+
+  const inHouseRows = inHouse.map((res) => {
+    const guestRaw = res.guests as
+      | { first_name?: string; last_name?: string }
+      | Array<{ first_name?: string; last_name?: string }>
+      | null;
+    const guest = Array.isArray(guestRaw) ? guestRaw[0] ?? null : guestRaw;
+    const rr = (res.reservation_rooms as Array<{ rooms: { room_number?: string } | Array<{ room_number?: string }> | null }>)[0];
+    const roomRaw = rr?.rooms;
+    const room = Array.isArray(roomRaw) ? roomRaw[0]?.room_number : roomRaw?.room_number;
+    return {
+      id: res.id,
+      guestName: `${guest?.first_name ?? ""} ${guest?.last_name ?? ""}`.trim() || "Unknown guest",
+      room: room ?? "Unassigned",
+    };
+  });
+
   const submitRoomMove = async (formData: FormData) => {
     "use server";
     try {
@@ -49,6 +67,64 @@ export default async function RoomMovePage({ searchParams }: RoomMovePageProps) 
       <div className="page-container">
         <FormStatusToast ok={ok} error={error} />
         <h1 className="page-title">Room Reallocation</h1>
+
+        <Card className="glass-panel">
+          <CardHeader><CardTitle className="text-base">In-House Guest Table</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable caption="Select guests and target rooms from table-first operational view.">
+              <thead className="bg-zinc-50 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">Guest</th>
+                  <th className="px-3 py-2 text-left font-semibold">Current Room</th>
+                  <th className="px-3 py-2 text-left font-semibold">Reservation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inHouseRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-6 text-center text-sm text-zinc-500">No in-house reservations available.</td>
+                  </tr>
+                ) : (
+                  inHouseRows.map((row) => (
+                    <tr key={row.id} className="border-t border-zinc-100">
+                      <td className="px-3 py-3 font-medium text-zinc-900">{row.guestName}</td>
+                      <td className="px-3 py-3 text-sm text-zinc-700">{row.room}</td>
+                      <td className="px-3 py-3 text-xs text-zinc-500">{row.id.slice(0, 8)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </DataTable>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-panel">
+          <CardHeader><CardTitle className="text-base">Vacant Room Table</CardTitle></CardHeader>
+          <CardContent>
+            <DataTable>
+              <thead className="bg-zinc-50 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">Room</th>
+                  <th className="px-3 py-2 text-left font-semibold">Floor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vacant.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="px-3 py-6 text-center text-sm text-zinc-500">No vacant rooms available.</td>
+                  </tr>
+                ) : (
+                  vacant.map((room) => (
+                    <tr key={room.id} className="border-t border-zinc-100">
+                      <td className="px-3 py-3 text-sm font-medium text-zinc-900">{room.room_number}</td>
+                      <td className="px-3 py-3 text-sm text-zinc-600">{room.floor ?? "-"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </DataTable>
+          </CardContent>
+        </Card>
 
         <Card className="glass-panel">
           <CardHeader><CardTitle className="text-base">Move Guest Room</CardTitle></CardHeader>

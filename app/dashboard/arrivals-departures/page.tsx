@@ -1,6 +1,13 @@
-import { redirect } from "next/navigation";
+import { LegacyRouteAliasBanner } from "@/components/custom/legacy-route-alias-banner";
 
-// Arrivals & Departures merged into unified Front Desk page.
+// Arrivals & Departures merged into canonical Stay View page.
 export default function ArrivalsDeparturesPage() {
-  redirect("/dashboard/front-desk");
+  return (
+    <LegacyRouteAliasBanner
+      aliasPath="/dashboard/arrivals-departures"
+      canonicalPath="/dashboard/stay-view"
+      title="Arrivals & Departures moved to Stay View"
+      description="This legacy board is now an alias. Stay View is the single operations board for arrival and departure execution."
+    />
+  );
 }

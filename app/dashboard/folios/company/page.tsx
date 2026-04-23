@@ -1,11 +1,15 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getCompanyBalances } from "../actions/folio-actions";
+import { getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 
 export default async function CompanyLedgerPage() {
   await redirectIfNotAuthenticated();
-  const { balances } = await getCompanyBalances();
+  const [{ balances }, currencyCode] = await Promise.all([
+    getCompanyBalances(),
+    getActivePropertyCurrency(),
+  ]);
 
   return (
     <div className="page-shell">
@@ -33,7 +37,7 @@ export default async function CompanyLedgerPage() {
                     {balances.map((row) => (
                       <tr key={row.company}>
                         <td className="px-4 py-3 font-medium text-zinc-900">{row.company}</td>
-                        <td className="px-4 py-3 text-right text-zinc-700">{formatCurrencyMinor(row.amountMinor, "USD")}</td>
+                        <td className="px-4 py-3 text-right text-zinc-700">{formatCurrencyMinor(row.amountMinor, currencyCode)}</td>
                       </tr>
                     ))}
                   </tbody>

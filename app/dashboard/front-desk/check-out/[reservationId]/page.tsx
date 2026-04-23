@@ -69,7 +69,7 @@ export default async function CheckOutPage({ params, searchParams }: PageProps) 
         <FormStatusToast ok={ok} error={error} />
         <div className="flex items-center justify-between">
           <h1 className="page-title">Guest Check-out</h1>
-          <Button asChild variant="outline" size="sm"><Link href="/dashboard/front-desk">Back</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/dashboard/stay-view">Back</Link></Button>
         </div>
 
         <Card className="glass-panel">

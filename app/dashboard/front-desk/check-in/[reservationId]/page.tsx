@@ -71,7 +71,7 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
         <FormStatusToast ok={ok} error={error} />
         <div className="flex items-center justify-between">
           <h1 className="page-title">Guest Check-in</h1>
-          <Button asChild variant="outline" size="sm"><Link href="/dashboard/front-desk">Back</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/dashboard/stay-view">Back</Link></Button>
         </div>
 
         <RegistrationCard
@@ -91,7 +91,7 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
                   <Link href={`/dashboard/folios/${folioId}`}>Open Folio →</Link>
                 </Button>
                 <Button asChild size="sm" variant="outline">
-                  <Link href="/dashboard/front-desk">Back to Front Desk</Link>
+                  <Link href="/dashboard/stay-view">Back to Stay View</Link>
                 </Button>
               </div>
             </CardContent>
@@ -138,7 +138,7 @@ export default async function CheckInPage({ params, searchParams }: PageProps) {
 
               <div className="grid gap-2 sm:max-w-xs">
                 <Label htmlFor="paymentCurrency">Currency</Label>
-                <Input id="paymentCurrency" name="paymentCurrency" defaultValue="USD" />
+                <Input id="paymentCurrency" name="paymentCurrency" defaultValue={ctx.propertyCurrencyCode ?? "USD"} />
               </div>
 
               {isEarlyArrival && (

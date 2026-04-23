@@ -250,6 +250,13 @@ export async function postOrderToFolio(orderId: string) {
   if (!order.reservation_id) return { error: "Order has no reservation to post against" };
   if (order.posted_charge_id) return { success: true, chargeId: order.posted_charge_id };
 
+  const { data: orderPropData } = await supabase
+    .from("properties")
+    .select("currency_code")
+    .eq("id", order.property_id)
+    .maybeSingle();
+  const orderCurrencyCode = orderPropData?.currency_code ?? "USD";
+
   const { data: items, error: itemsErr } = await supabase
     .from("order_items")
     .select("quantity, unit_price_minor")
@@ -274,7 +281,7 @@ export async function postOrderToFolio(orderId: string) {
   if (!folioId) {
     const { data: newFolio, error: newFolioErr } = await supabase
       .from("folios")
-      .insert({ reservation_id: order.reservation_id, status: "open", currency_code: "USD" })
+      .insert({ reservation_id: order.reservation_id, status: "open", currency_code: orderCurrencyCode })
       .select("id")
       .single();
 

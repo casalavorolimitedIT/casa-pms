@@ -118,12 +118,22 @@ async function resolveFolioIdForReservation(reservationId: string) {
     .maybeSingle();
 
   if (!folio) {
+    const { data: reservationRow } = await supabase
+      .from("reservations")
+      .select("property_id")
+      .eq("id", reservationId)
+      .maybeSingle();
+    const { data: propData } = reservationRow?.property_id
+      ? await supabase.from("properties").select("currency_code").eq("id", reservationRow.property_id).maybeSingle()
+      : { data: null };
+    const currencyCode = propData?.currency_code ?? "USD";
+
     const { data: created, error: folioError } = await supabase
       .from("folios")
       .insert({
         reservation_id: reservationId,
         status: "open",
-        currency_code: "USD",
+        currency_code: currencyCode,
       })
       .select("id")
       .single();

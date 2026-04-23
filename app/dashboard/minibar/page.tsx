@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { FormSelectField } from "@/components/ui/form-select-field";
@@ -37,7 +37,10 @@ export default async function MinibarPage({ searchParams }: MinibarPageProps) {
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
   }
 
-  const context = await getMinibarContext(activePropertyId);
+  const [context, currencyCode] = await Promise.all([
+    getMinibarContext(activePropertyId),
+    getActivePropertyCurrency(),
+  ]);
 
   const reservationOptions = context.reservations
     .map((reservation) => {
@@ -132,7 +135,7 @@ export default async function MinibarPage({ searchParams }: MinibarPageProps) {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               <span>Posted Items</span>
-              <Badge variant="outline">{formatCurrencyMinor(totalMinor, "USD")}</Badge>
+              <Badge variant="outline">{formatCurrencyMinor(totalMinor, currencyCode)}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -150,7 +153,7 @@ export default async function MinibarPage({ searchParams }: MinibarPageProps) {
                         {getGuestName(((row.reservations as any)?.[0]?.guests) ?? ((row.reservations as any)?.guests))}
                         {room?.room_number ? ` · Room ${room.room_number}` : ""}
                       </p>
-                      <p className="text-zinc-600">{formatCurrencyMinor(row.amount_minor, "USD")}</p>
+                      <p className="text-zinc-600">{formatCurrencyMinor(row.amount_minor, currencyCode)}</p>
                       <p className="text-xs text-zinc-500">{new Date(row.posted_at).toLocaleString("en-GB")}</p>
                     </li>
                   );

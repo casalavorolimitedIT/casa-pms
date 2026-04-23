@@ -128,7 +128,7 @@ export default async function ReservationCalendarPage({ searchParams }: Reservat
   ];
 
   return (
-    <div className="page-shell">
+    <div className="page-">
       <div className="page-container min-w-0 overflow-x-hidden">
         <div className="flex items-center justify-between gap-3">
           <div>

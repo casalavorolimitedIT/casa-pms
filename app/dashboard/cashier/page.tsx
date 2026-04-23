@@ -1,6 +1,6 @@
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { addCashDrawerEntry, closeShift, getCashierContext, openShift } from "./actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -19,7 +19,10 @@ export default async function CashierPage() {
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
   }
 
-  const context = await getCashierContext(activePropertyId);
+  const [context, currencyCode] = await Promise.all([
+    getCashierContext(activePropertyId),
+    getActivePropertyCurrency(),
+  ]);
 
   const signedEntriesTotal = context.entries.reduce((sum, entry) => {
     const delta = entry.entry_type === "cash_out" ? -Math.abs(entry.amount_minor) : Math.abs(entry.amount_minor);
@@ -54,7 +57,7 @@ export default async function CashierPage() {
               }}
             >
               <label className="grid gap-1 text-sm">
-                Opening Float (USD)
+                Opening Float ({currencyCode})
                 <input
                   name="openingFloat"
                   type="number"
@@ -73,15 +76,15 @@ export default async function CashierPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="border-zinc-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-zinc-600">Opening Float</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-semibold text-zinc-900">{formatCurrencyMinor(context.activeShift.opening_float_minor, "USD")}</p></CardContent>
+              <CardContent><p className="text-2xl font-semibold text-zinc-900">{formatCurrencyMinor(context.activeShift.opening_float_minor, currencyCode)}</p></CardContent>
             </Card>
             <Card className="border-zinc-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-zinc-600">Expected Cash</CardTitle></CardHeader>
-              <CardContent><p className="text-2xl font-semibold text-zinc-900">{formatCurrencyMinor(expectedCashMinor, "USD")}</p></CardContent>
+              <CardContent><p className="text-2xl font-semibold text-zinc-900">{formatCurrencyMinor(expectedCashMinor, currencyCode)}</p></CardContent>
             </Card>
             <Card className="border-zinc-200">
               <CardHeader className="pb-2"><CardTitle className="text-sm text-zinc-600">Variance</CardTitle></CardHeader>
-              <CardContent><p className={`text-2xl font-semibold ${varianceMinor === 0 ? "text-zinc-900" : "text-amber-700"}`}>{formatCurrencyMinor(varianceMinor, "USD")}</p></CardContent>
+              <CardContent><p className={`text-2xl font-semibold ${varianceMinor === 0 ? "text-zinc-900" : "text-amber-700"}`}>{formatCurrencyMinor(varianceMinor, currencyCode)}</p></CardContent>
             </Card>
           </div>
 
@@ -129,7 +132,7 @@ export default async function CashierPage() {
                         </div>
                         <p className={entry.entry_type === "cash_out" ? "font-semibold text-amber-700" : "font-semibold text-emerald-700"}>
                           {entry.entry_type === "cash_out" ? "-" : "+"}
-                          {formatCurrencyMinor(Math.abs(entry.amount_minor), "USD")}
+                          {formatCurrencyMinor(Math.abs(entry.amount_minor), currencyCode)}
                         </p>
                       </li>
                     ))}
@@ -144,7 +147,7 @@ export default async function CashierPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="page-subtitle">
-                  Expected cash at close: <span className="font-medium text-zinc-900">{formatCurrencyMinor(expectedCashMinor, "USD")}</span>
+                  Expected cash at close: <span className="font-medium text-zinc-900">{formatCurrencyMinor(expectedCashMinor, currencyCode)}</span>
                 </p>
 
                 <form
@@ -198,7 +201,7 @@ export default async function CashierPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-zinc-500">Opening</p>
-                      <p className="font-semibold text-zinc-900">{formatCurrencyMinor(shift.opening_float_minor, "USD")}</p>
+                      <p className="font-semibold text-zinc-900">{formatCurrencyMinor(shift.opening_float_minor, currencyCode)}</p>
                     </div>
                   </li>
                 );

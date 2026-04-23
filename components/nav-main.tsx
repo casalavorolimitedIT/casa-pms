@@ -36,6 +36,7 @@ const NAV_DESCRIPTIONS: Record<string, string> = {
 
 const SUBMENU_DESCRIPTIONS: Record<string, string> = {
   Dashboard: "High-level property health, occupancy, and daily KPIs.",
+  "Stay View": "Canonical live operations board for arrivals, departures, in-house stays, and room actions.",
   "Front Desk": "Handle check-ins, check-outs, and live guest interactions.",
   Folios: "Review and manage guest billing, charges, and payments.",
   Rooms: "Configure inventory, statuses, and room-level readiness.",
@@ -60,7 +61,7 @@ const SUBMENU_DESCRIPTIONS: Record<string, string> = {
   "Segmentation": "Revenue share by direct, OTA, corporate, walk-in, group, and agent.",
   Agents: "Manage travel-agent profiles, commissions, and payout tracking.",
   "Arrivals & Departures": "Track today’s guest movement and priorities.",
-  "Room Board": "Visual room status board for operations coordination.",
+  "Room Board": "Legacy route alias for room operations. Use Stay View as canonical workspace.",
   Housekeeping: "Assign and monitor cleaning and inspection tasks.",
   "Work Orders": "Log and resolve engineering and maintenance issues.",
   Maintenance: "Plan recurring preventive maintenance and close due tasks.",

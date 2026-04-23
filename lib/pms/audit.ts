@@ -20,6 +20,13 @@ export async function postRoomCharges(propertyId: string, businessDate: string) 
     .lte("check_in", businessDate)
     .gt("check_out", businessDate);
 
+  const { data: propertyData } = await supabase
+    .from("properties")
+    .select("currency_code")
+    .eq("id", propertyId)
+    .maybeSingle();
+  const propertyCurrencyCode = propertyData?.currency_code ?? "USD";
+
   let postedTotalMinor = 0;
 
   for (const reservation of reservations ?? []) {
@@ -42,7 +49,7 @@ export async function postRoomCharges(propertyId: string, businessDate: string) 
     if (!folio) {
       const { data: createdFolio } = await supabase
         .from("folios")
-        .insert({ reservation_id: reservation.id, status: "open", currency_code: "USD" })
+        .insert({ reservation_id: reservation.id, status: "open", currency_code: propertyCurrencyCode })
         .select("id")
         .single();
       folio = createdFolio;

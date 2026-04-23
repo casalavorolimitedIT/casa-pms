@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 import Link from "next/link";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { RoomTypeThumbnail } from "@/components/custom/room-type-thumbnail";
 
 export default async function RoomTypesPage() {
@@ -19,7 +19,10 @@ export default async function RoomTypesPage() {
     );
   }
 
-  const { roomTypes } = await getRoomTypes(activePropertyId);
+  const [{ roomTypes }, currencyCode] = await Promise.all([
+    getRoomTypes(activePropertyId),
+    getActivePropertyCurrency(),
+  ]);
 
   return (
     <div className="page-shell">
@@ -65,7 +68,7 @@ export default async function RoomTypesPage() {
                 )}
                 <p>
                   <span className="text-muted-foreground">Base rate: </span>
-                  {formatCurrencyMinor(rt.base_rate_minor, "USD")} / night
+                  {formatCurrencyMinor(rt.base_rate_minor, currencyCode)} / night
                 </p>
                 <p>
                   <span className="text-muted-foreground">Max occupancy: </span>

@@ -59,10 +59,10 @@ export default async function DashboardLayout({
 
             <div className="hidden items-center gap-2 md:flex">
               <Button asChild variant="outline" size="sm" className="border-zinc-200 bg-white/70">
-                <Link href="/dashboard/arrivals-departures">Today&apos;s Board</Link>
+                <Link href="/dashboard/stay-view">Today&apos;s Board</Link>
               </Button>
               <Button asChild size="sm" className="bg-[#ff6900] text-white hover:bg-[#e55f00]">
-                <Link href="/dashboard/front-desk">Open Front Desk</Link>
+                <Link href="/dashboard/stay-view">Open Stay View</Link>
               </Button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { getActivePropertyId } from "@/lib/pms/property-context";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/data-table";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -124,54 +125,67 @@ export default async function WakeUpCallsPage({ searchParams }: WakeupPageProps)
             <h3 className="text-sm font-medium text-foreground">Active Queue</h3>
             <Badge variant="outline" className="font-normal text-zinc-500 bg-zinc-50">{context.calls.length} Requests</Badge>
           </div>
-          
+
           {context.calls.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-8 text-center text-sm text-zinc-500">
               No wake-up calls recorded for this property.
             </div>
           ) : (
-            <ul className="space-y-3">
-              {context.calls.map((call) => {
-                const reservationRaw = call.reservations as { guests?: unknown; reservation_rooms?: unknown } | Array<{ guests?: unknown; reservation_rooms?: unknown }> | null;
-                const reservation = Array.isArray(reservationRaw) ? reservationRaw[0] : reservationRaw;
-                return (
-                  <li key={call.id} className="rounded-xl bg-card border border-border shadow-sm p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-zinc-900">{getGuestName(reservation?.guests)}</p>
-                          <Badge variant="secondary" className={cn("text-xs font-medium px-2 py-0.5", STATUS_TONE[call.status] ?? STATUS_TONE.scheduled)}>
-                            {call.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-zinc-600 flex items-center gap-1.5">
-                          <svg className="size-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          {new Date(call.scheduled_for).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                        {call.note ? <p className="text-sm text-zinc-500 mt-2 bg-zinc-50 rounded-md p-2 border border-zinc-100">{call.note}</p> : null}
-                      </div>
-
-                      <form action={updateAction} className="flex items-center gap-3 w-full sm:w-auto">
-                        <input type="hidden" name="wakeupId" value={call.id} />
-                        <div className="w-full sm:w-40">
-                          <FormSelectField
-                            name="status"
-                            defaultValue={call.status}
-                            options={[
-                              { value: "scheduled", label: "Scheduled" },
-                              { value: "called", label: "Called" },
-                              { value: "missed", label: "Missed" },
-                              { value: "cancelled", label: "Cancelled" },
-                            ]}
-                          />
-                        </div>
-                        <FormSubmitButton idleText="Update" pendingText="..." size="sm" variant="secondary" />
-                      </form>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <DataTable caption="Table-first wake-up call queue.">
+              <thead className="bg-zinc-50 text-xs uppercase tracking-[0.12em] text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">Guest</th>
+                  <th className="px-3 py-2 text-left font-semibold">Scheduled For</th>
+                  <th className="px-3 py-2 text-left font-semibold">Note</th>
+                  <th className="px-3 py-2 text-left font-semibold">Status</th>
+                  <th className="px-3 py-2 text-right font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {context.calls.map((call) => {
+                  const reservationRaw = call.reservations as { guests?: unknown; reservation_rooms?: unknown } | Array<{ guests?: unknown; reservation_rooms?: unknown }> | null;
+                  const reservation = Array.isArray(reservationRaw) ? reservationRaw[0] : reservationRaw;
+                  return (
+                    <tr key={call.id} className="border-t border-zinc-100 align-top">
+                      <td className="px-3 py-3 font-medium text-zinc-900">{getGuestName(reservation?.guests)}</td>
+                      <td className="px-3 py-3 text-sm text-zinc-600">
+                        {new Date(call.scheduled_for).toLocaleString("en-GB", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-3 py-3 text-sm text-zinc-600">{call.note || "-"}</td>
+                      <td className="px-3 py-3">
+                        <Badge variant="secondary" className={cn("text-xs font-medium px-2 py-0.5", STATUS_TONE[call.status] ?? STATUS_TONE.scheduled)}>
+                          {call.status}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-3">
+                        <form action={updateAction} className="flex items-center justify-end gap-2">
+                          <input type="hidden" name="wakeupId" value={call.id} />
+                          <div className="min-w-36">
+                            <FormSelectField
+                              name="status"
+                              defaultValue={call.status}
+                              options={[
+                                { value: "scheduled", label: "Scheduled" },
+                                { value: "called", label: "Called" },
+                                { value: "missed", label: "Missed" },
+                                { value: "cancelled", label: "Cancelled" },
+                              ]}
+                            />
+                          </div>
+                          <FormSubmitButton idleText="Update" pendingText="..." size="sm" variant="secondary" />
+                        </form>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
           )}
         </div>
       </div>

@@ -83,6 +83,13 @@ export async function postMinibarCharge(formData: FormData) {
     return { error: "Room not found for the active property" };
   }
 
+  const { data: propData } = await supabase
+    .from("properties")
+    .select("currency_code")
+    .eq("id", parsed.data.propertyId)
+    .maybeSingle();
+  const propertyCurrencyCode = propData?.currency_code ?? "USD";
+
   let { data: folio } = await supabase
     .from("folios")
     .select("id")
@@ -95,7 +102,7 @@ export async function postMinibarCharge(formData: FormData) {
       .insert({
         reservation_id: parsed.data.reservationId,
         status: "open",
-        currency_code: "USD",
+        currency_code: propertyCurrencyCode,
       })
       .select("id")
       .single();

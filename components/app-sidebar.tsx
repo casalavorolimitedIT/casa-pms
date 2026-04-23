@@ -61,13 +61,8 @@ const data = {
           url: "/dashboard",
         },
         {
-          title: "Front Desk",
-          url: "/dashboard/front-desk",
-          requiredPermission: "checkin.perform",
-        },
-        {
-          title: "Room Board",
-          url: "/dashboard/room-board",
+          title: "Stay View",
+          url: "/dashboard/stay-view",
           requiredPermission: "rooms.view",
         },
         {
@@ -498,8 +493,8 @@ const data = {
       ),
     },
     {
-      name: "Front Desk",
-      url: "/dashboard/front-desk",
+      name: "Stay View",
+      url: "/dashboard/stay-view",
       icon: (
         <HugeiconsIcon icon={AudioWave01Icon} strokeWidth={2} />
       ),

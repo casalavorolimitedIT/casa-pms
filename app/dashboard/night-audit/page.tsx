@@ -1,5 +1,5 @@
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 import { redirect } from "next/navigation";
 import {
@@ -45,7 +45,10 @@ export default async function NightAuditPage({ searchParams }: NightAuditPagePro
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
   }
 
-  const history = await getNightAuditHistory(activePropertyId);
+  const [history, currencyCode] = await Promise.all([
+    getNightAuditHistory(activePropertyId),
+    getActivePropertyCurrency(),
+  ]);
   const businessDate = businessDateToday();
 
   // Check if today's audit already ran
@@ -196,11 +199,11 @@ export default async function NightAuditPage({ searchParams }: NightAuditPagePro
                       <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                         <div className="rounded-md border border-zinc-200 px-2 py-1">
                           <p className="text-zinc-500">Room Revenue</p>
-                          <p className="font-semibold text-zinc-900">{formatCurrencyMinor(snapshot.room_revenue_minor, "USD")}</p>
+                          <p className="font-semibold text-zinc-900">{formatCurrencyMinor(snapshot.room_revenue_minor, currencyCode)}</p>
                         </div>
                         <div className="rounded-md border border-zinc-200 px-2 py-1">
                           <p className="text-zinc-500">Non-room Revenue</p>
-                          <p className="font-semibold text-zinc-900">{formatCurrencyMinor(snapshot.non_room_revenue_minor, "USD")}</p>
+                          <p className="font-semibold text-zinc-900">{formatCurrencyMinor(snapshot.non_room_revenue_minor, currencyCode)}</p>
                         </div>
                       </div>
                     </li>

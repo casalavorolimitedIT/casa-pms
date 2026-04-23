@@ -50,7 +50,7 @@ export async function toggleRoomDnd(formData: FormData) {
     propertyId: formData.get("propertyId"),
     roomId: formData.get("roomId"),
     isDnd: formData.get("isDnd") === "true",
-    note: formData.get("note"),
+    note: formData.get("note") ?? undefined,
   });
 
   if (!parsed.success) {

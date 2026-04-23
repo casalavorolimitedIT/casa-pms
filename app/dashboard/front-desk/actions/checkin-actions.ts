@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { initializePayment } from "@/lib/payments/provider";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 
 const CheckInSchema = z.object({
   reservationId: z.string().uuid(),
@@ -93,7 +93,7 @@ export async function getCheckInReservationContext(reservationId: string) {
   const assigned = (reservation.reservation_rooms as Array<{ room_type_id: string }>)[0];
   const roomTypeId = assigned?.room_type_id;
 
-  const [roomsRes, settingsRes] = await Promise.all([
+  const [roomsRes, settingsRes, propertyRes] = await Promise.all([
     supabase
       .from("rooms")
       .select("id, room_number, status")
@@ -106,13 +106,20 @@ export async function getCheckInReservationContext(reservationId: string) {
       .select("check_in_time, early_checkin_fee_minor")
       .eq("property_id", activePropertyId)
       .maybeSingle(),
+    supabase
+      .from("properties")
+      .select("currency_code")
+      .eq("id", activePropertyId)
+      .maybeSingle(),
   ]);
 
   const settingsRow = settingsRes.data;
+  const propertyCurrencyCode = (propertyRes.data?.currency_code as string | null) ?? "USD";
 
   return {
     reservation,
     availableRooms: roomsRes.data ?? [],
+    propertyCurrencyCode,
     propertySettings: settingsRow
       ? {
           checkInTime: (settingsRow.check_in_time as string).slice(0, 5),
@@ -179,7 +186,7 @@ export async function confirmCheckIn(formData: FormData) {
   } else {
     const { data: newFolio } = await supabase
       .from("folios")
-      .insert({ reservation_id: reservationId, status: "open", currency_code: paymentCurrency || "USD" })
+      .insert({ reservation_id: reservationId, status: "open", currency_code: paymentCurrency || (await getActivePropertyCurrency()) })
       .select("id")
       .single();
     folioId = newFolio?.id;
@@ -209,13 +216,14 @@ export async function confirmCheckIn(formData: FormData) {
       amountMinor: setupAmountMinor,
       currency: paymentCurrency,
       email: paymentEmail,
-      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/front-desk`,
+      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard/stay-view`,
       reference: `checkin-${reservationId}-${Date.now()}`,
     });
     paymentSetupUrl = setup.authorizationUrl;
   }
 
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
   revalidatePath(`/dashboard/front-desk/check-in/${reservationId}`);
   return { success: true, paymentSetupUrl, folioId };
 }
@@ -242,12 +250,13 @@ export async function getCheckOutReservationContext(reservationId: string) {
     .maybeSingle();
 
   if (!folio) {
+    const propertyCurrency = await getActivePropertyCurrency();
     const { data: created } = await supabase
       .from("folios")
       .insert({
         reservation_id: reservationId,
         status: "open",
-        currency_code: "USD",
+        currency_code: propertyCurrency,
       })
       .select("id, status, currency_code")
       .single();
@@ -299,7 +308,7 @@ export async function confirmCheckOut(formData: FormData) {
     paymentMethod: formData.get("paymentMethod"),
     amountMinor: formData.get("amountMinor"),
     currency: formData.get("currency"),
-    email: formData.get("email"),
+    email: formData.get("email") ?? undefined,
     postLateFee: formData.get("postLateFee") === "on",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
@@ -387,6 +396,7 @@ export async function confirmCheckOut(formData: FormData) {
     .eq("id", reservationId);
 
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
   revalidatePath(`/dashboard/front-desk/check-out/${reservationId}`);
   return { success: true, providerReference };
 }
@@ -441,6 +451,7 @@ export async function moveRoom(formData: FormData) {
   });
 
   revalidatePath("/dashboard/front-desk");
+  revalidatePath("/dashboard/stay-view");
   revalidatePath("/dashboard/front-desk/room-move");
   return { success: true };
 }

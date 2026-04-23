@@ -22,8 +22,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Casa PMS",
   description: "Hotel operations, front desk, and guest lifecycle management in one workspace.",
+  icons: {
+    icon: [
+      {
+        url: "/casalogo2.png",
+        href: "/casalogo2.png",
+      },
+    ],
+  },
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{

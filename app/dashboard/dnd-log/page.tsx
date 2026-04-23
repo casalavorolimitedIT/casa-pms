@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
 import { getActivePropertyId } from "@/lib/pms/property-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,9 +32,14 @@ export default async function DndLogPage({ searchParams }: DndPageProps) {
 
   const toggleAction = async (formData: FormData) => {
     "use server";
-    const result = await toggleRoomDnd(formData);
-    if (result?.success) redirect(`/dashboard/dnd-log?ok=${encodeURIComponent("DND status updated.")}`);
-    redirect(`/dashboard/dnd-log?error=${encodeURIComponent(result?.error ?? "Unable to update DND.")}`);
+    try {
+      const result = await toggleRoomDnd(formData);
+      if (result?.success) redirect(`/dashboard/dnd-log?ok=${encodeURIComponent("DND status updated.")}`);
+      redirect(`/dashboard/dnd-log?error=${encodeURIComponent(result?.error ?? "Unable to update DND.")}`);
+    } catch (err) {
+      unstable_rethrow(err);
+      redirect(`/dashboard/dnd-log?error=${encodeURIComponent("Unable to update DND.")}`);
+    }
   };
 
   const activeCount = Object.keys(context.activeByRoom).length;
@@ -90,7 +95,7 @@ export default async function DndLogPage({ searchParams }: DndPageProps) {
                             idleText={active ? "Clear DND" : "Set DND"}
                             pendingText="Saving..."
                             variant={active ? "outline" : "default"}
-                            className="w-full"
+                            className="w-full h-12!"
                           />
                         </div>
                       </form>

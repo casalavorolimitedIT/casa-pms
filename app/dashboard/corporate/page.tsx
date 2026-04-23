@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { redirectIfNotAuthenticated } from "@/lib/redirect/redirectIfNotAuthenticated";
-import { getActivePropertyId } from "@/lib/pms/property-context";
+import { getActivePropertyId, getActivePropertyCurrency } from "@/lib/pms/property-context";
 import { formatCurrencyMinor } from "@/lib/pms/formatting";
 import { PageHelpDialog } from "@/components/custom/page-help-dialog";
 import { FormStatusToast } from "@/components/custom/form-status-toast";
@@ -32,7 +32,10 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
     return <div className="p-6 text-sm text-muted-foreground">Set DEMO_PROPERTY_ID in .env.local or select an active property from the header.</div>;
   }
 
-  const context = await getCorporateContext(activePropertyId);
+  const [context, currencyCode] = await Promise.all([
+    getCorporateContext(activePropertyId),
+    getActivePropertyCurrency(),
+  ]);
 
   const createAccountAction = async (formData: FormData) => {
     "use server";
@@ -99,7 +102,7 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
         <div className="grid gap-3 md:grid-cols-3">
           <Metric title="Accounts" value={context.summary.accounts} />
           <Metric title="Open Invoices" value={context.summary.openInvoices} />
-          <Metric title="Receivable" value={formatCurrencyMinor(context.summary.receivableMinor, "USD")} />
+          <Metric title="Receivable" value={formatCurrencyMinor(context.summary.receivableMinor, currencyCode)} />
         </div>
 
         <Card className="glass-panel border-zinc-200/80 bg-linear-to-br from-white via-zinc-50/70 to-white">
@@ -229,7 +232,7 @@ export default async function CorporatePage({ searchParams }: CorporatePageProps
                       </div>
                         );
                       })()}
-                      <p className="mt-2 text-sm font-medium text-zinc-800">{formatCurrencyMinor(invoice.total_minor, "USD")}</p>
+                      <p className="mt-2 text-sm font-medium text-zinc-800">{formatCurrencyMinor(invoice.total_minor, currencyCode)}</p>
 
                       <form action={postPaymentAction} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                         <input type="hidden" name="invoiceId" value={invoice.id} />
