@@ -4,6 +4,7 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
+import { DevToolbar } from 'next-dev-toolbar';
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -46,7 +47,8 @@ export default function RootLayout({
           {children}
           <Toaster position="top-right" closeButton />
         </TooltipProvider>
-      </body>
+      {process.env.NODE_ENV === 'development' && <DevToolbar />}
+        </body>
     </html>
   );
 }
