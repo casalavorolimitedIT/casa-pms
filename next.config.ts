@@ -1,3 +1,4 @@
+import { withDevToolbar } from 'next-dev-toolbar/plugin';
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -6,4 +7,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withDevToolbar()(nextConfig);

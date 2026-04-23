@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -60,6 +60,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "next-dev-toolbar": "github:jerrydev01/next-dev-toolbar",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5"
