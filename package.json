@@ -60,9 +60,11 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "next-dev-toolbar": "github:jerrydev01/next-dev-toolbar",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "next-dev-toolbar": "github:Jerrydev01/next-dev-toolbar"
   }
 }
