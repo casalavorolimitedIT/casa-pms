@@ -81,7 +81,7 @@ export function HoverOutline({ target, breadcrumb, actionName }: Props) {
                 marginLeft: 2,
               }}
             >
-              +{overflowCount} · X to expand
+              +{overflowCount} · X tree · P props
             </span>
           )}
           {!isCollapsed && names.length > 1 && (
@@ -95,7 +95,7 @@ export function HoverOutline({ target, breadcrumb, actionName }: Props) {
                 marginLeft: 2,
               }}
             >
-              X to expand
+              X tree · P props
             </span>
           )}
         </span>

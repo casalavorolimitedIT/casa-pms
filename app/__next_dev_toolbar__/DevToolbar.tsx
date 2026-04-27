@@ -1,20 +1,35 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { getFiber, getSourceFromFiber, getBreadcrumb } from './lib/fiber';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  getFiber,
+  getSourceFromFiber,
+  getSourceFromElement,
+  getBreadcrumb,
+  getInspectableFiber,
+} from './lib/fiber';
 import type { BreadcrumbItem } from './lib/fiber';
-import { openInEditor } from './lib/sidecar';
+import { openInEditor, fetchPropsDefinition } from './lib/sidecar';
 import { Toast } from './components/Toast';
 import { HoverOutline } from './components/HoverOutline';
 import { TreePanel } from './components/TreePanel';
 import { SearchPalette } from './components/SearchPalette';
+import { PropsPanel } from './components/PropsPanel';
 import { BoundaryOverlay } from './features/BoundaryOverlay';
 import { RerenderFlash } from './features/RerenderFlash';
+import { buildPropsPanelData } from './lib/props';
+import type { PropsPanelData } from './lib/props';
 
 interface HoverState {
   el: Element;
   breadcrumb: BreadcrumbItem[];
   actionName: string | null;
+}
+
+function pickHoveredComponentName(state: HoverState) {
+  return [...state.breadcrumb]
+    .reverse()
+    .find((item) => /^[A-Z]/.test(item.name))?.name;
 }
 
 export function DevToolbar() {
@@ -28,9 +43,11 @@ export function DevToolbar() {
   // These are NOT cleared by mouse movement — only by X / Esc / backdrop click
   const [treeOpen, setTreeOpen] = useState(false);
   const [pinnedHover, setPinnedHover] = useState<HoverState | null>(null);
+  const [propsPanel, setPropsPanel] = useState<PropsPanelData | null>(null);
 
   const [boundaryOn, setBoundaryOn] = useState(false);
-  const [rerenderOn, setRerenderOn] = useState(false);
+    const [rerenderOn, setRerenderOn] = useState<boolean>(false);
+  const propsRequestId = useRef(0);
 
   // clearHover only clears the live hover tooltip — never touches the pinned tree
   const clearHover = useCallback(() => setHovered(null), []);
@@ -38,6 +55,81 @@ export function DevToolbar() {
   const closeTree = useCallback(() => {
     setTreeOpen(false);
     setPinnedHover(null);
+  }, []);
+
+  const closeProps = useCallback(() => {
+    propsRequestId.current += 1;
+    setPropsPanel(null);
+  }, []);
+
+  const openPropsPanel = useCallback(async (selection: HoverState) => {
+    const requestId = propsRequestId.current + 1;
+    propsRequestId.current = requestId;
+
+    const inspectable = getInspectableFiber(selection.el);
+    const source = inspectable?.source ?? getSourceFromElement(selection.el);
+    const liveProps = inspectable?.props ?? {};
+    const livePropsAvailable = Object.keys(liveProps).length > 0;
+    const fallbackName = pickHoveredComponentName(selection) ?? selection.el.tagName.toLowerCase();
+    const componentName = inspectable?.componentName ?? fallbackName;
+    const line = source?.lineNumber ?? 1;
+    const file = source?.fileName ?? null;
+
+    setPropsPanel(
+      buildPropsPanelData({
+        componentName,
+        file,
+        line,
+        liveProps,
+        loading: Boolean(file),
+        note: file
+          ? 'Reading prop types from source…'
+          : livePropsAvailable
+            ? 'Source unavailable — showing live props only.'
+            : 'Live values are unavailable for this target.',
+      }),
+    );
+
+    if (!file) return;
+
+    try {
+      const definition = await fetchPropsDefinition(file, componentName);
+      if (propsRequestId.current !== requestId) return;
+
+      setPropsPanel(
+        buildPropsPanelData({
+          componentName: definition.componentName || componentName,
+          file: definition.file || file,
+          line,
+          schemaProps: definition.props,
+          liveProps,
+          schemaSource: definition.source,
+          loading: false,
+          note: !livePropsAvailable
+            ? 'Live values are unavailable for this target.'
+            : definition.props.length === 0
+              ? 'No TypeScript or PropTypes declaration was found. Showing live props only.'
+              : null,
+        }),
+      );
+    } catch (error) {
+      if (propsRequestId.current !== requestId) return;
+
+      setPropsPanel(
+        buildPropsPanelData({
+          componentName,
+          file,
+          line,
+          liveProps,
+          loading: false,
+          note: !livePropsAvailable
+            ? 'Live values are unavailable for this target.'
+            : error instanceof Error
+              ? `${error.message}. Showing live props only.`
+              : 'Could not parse source props. Showing live props only.',
+        }),
+      );
+    }
   }, []);
 
   // ─── Keyboard shortcuts ──────────────────────────────────────────────────
@@ -57,14 +149,34 @@ export function DevToolbar() {
       if (e.key === 'Escape') {
         setSearchOpen(false);
         setBoundaryOn(false);
+        closeProps();
         closeTree();
       }
 
       // B — boundary overlay
-      if (e.key === 'b' || e.key === 'B') setBoundaryOn((v) => !v);
+      if (e.key === 'b' || e.key === 'B') setBoundaryOn((v: boolean) => !v);
 
       // R — re-render flash
-      if (e.key === 'r' || e.key === 'R') setRerenderOn((v) => !v);
+        if (e.key === 'r' || e.key === 'R') setRerenderOn((v: boolean) => !v);
+
+      // P — inspect props for the current hover target
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+
+        if (propsPanel) {
+          closeProps();
+          return;
+        }
+
+        const selection = hovered ?? pinnedHover;
+        if (!selection) {
+          setToast('Hold ⌥ and hover a component, then press P');
+          return;
+        }
+
+        if (treeOpen) closeTree();
+        void openPropsPanel(selection);
+      }
 
       // X — open tree (pin current hover) or close if already open
       if (e.key === 'x' || e.key === 'X') {
@@ -80,7 +192,7 @@ export function DevToolbar() {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hovered, treeOpen, closeTree]);
+  }, [hovered, treeOpen, pinnedHover, propsPanel, closeProps, closeTree, openPropsPanel]);
 
   // ─── ⌥ hover → inline breadcrumb tooltip ────────────────────────────────
   useEffect(() => {
@@ -162,12 +274,10 @@ export function DevToolbar() {
       }
 
       if (!file) {
-        const srcEl = target.closest('[data-dev-src]');
-        if (srcEl) {
-          const raw = srcEl.getAttribute('data-dev-src')!;
-          const parts = raw.split(':');
-          line = parseInt(parts[parts.length - 1], 10);
-          file = parts.slice(0, -1).join(':');
+        const src = getSourceFromElement(target);
+        if (src) {
+          file = src.fileName;
+          line = src.lineNumber;
         }
       }
 
@@ -202,6 +312,7 @@ export function DevToolbar() {
           'next-dev-toolbar',
           '⌥+click  open in editor',
           '⌥+hover  breadcrumb  (X to pin tree)',
+          'P  props panel',
           '/  search',
           'B  boundary overlay',
           'R  re-render flash',
@@ -242,6 +353,7 @@ export function DevToolbar() {
         <span>DEV</span>
         <span style={{ color: '#2a2a2a' }}>|</span>
         <span>/ search</span>
+        {propsPanel && <span style={{ color: '#93c5fd', fontSize: 10 }}>props</span>}
         {boundaryOn && <span style={{ color: '#34d399', fontSize: 10 }}>B</span>}
         {rerenderOn && <span style={{ color: 'rgba(239,68,68,.9)', fontSize: 10 }}>R</span>}
         {treeOpen && <span style={{ color: '#6ee7b7', fontSize: 10 }}>tree</span>}
@@ -267,6 +379,8 @@ export function DevToolbar() {
           onClose={closeTree}
         />
       )}
+
+      {propsPanel && <PropsPanel panel={propsPanel} onClose={closeProps} />}
 
       {searchOpen && <SearchPalette onClose={() => setSearchOpen(false)} />}
       {toast && <Toast msg={toast} onDone={() => setToast(null)} />}

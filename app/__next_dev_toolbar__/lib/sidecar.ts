@@ -30,10 +30,44 @@ export interface SearchResult {
   componentName?: string;
 }
 
+export type PropsDefinitionSource = 'typescript' | 'propTypes' | 'unknown';
+
+export interface ParsedPropDescriptor {
+  name: string;
+  type: string;
+  required: boolean;
+  source: PropsDefinitionSource | 'runtime';
+}
+
+export interface PropsDefinitionResult {
+  componentName: string;
+  file: string;
+  source: PropsDefinitionSource;
+  props: ParsedPropDescriptor[];
+}
+
 export async function fetchSearch(q: string): Promise<SearchResult[]> {
   const res = await fetch(`${SIDECAR}/search?q=${encodeURIComponent(q)}`);
   const data = await res.json();
   return data.results ?? [];
+}
+
+export async function fetchPropsDefinition(
+  file: string,
+  componentName?: string | null,
+): Promise<PropsDefinitionResult> {
+  const res = await fetch(`${SIDECAR}/props`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file, componentName }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+
+  return res.json();
 }
 
 /**
